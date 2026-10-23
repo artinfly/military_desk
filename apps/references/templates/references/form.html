@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="breadcrumbs">
+    <a href="{% url 'references:catalog' %}">Справочники</a> /
+    <a href="{% url 'references:list' ref.slug %}">{{ ref.title }}</a> /
+    {% if object %}{{ object }}{% else %}новая запись{% endif %}
+</div>
+
+<form class="panel form" method="post">
+    {% csrf_token %}
+    {% include "includes/form_fields.html" %}
+    <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Сохранить</button>
+        <a class="btn" href="{% url 'references:list' ref.slug %}">Отмена</a>
+    </div>
+</form>
+{% endblock %}

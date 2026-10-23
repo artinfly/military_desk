@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     # Приложения проекта (apps/): каждое отвечает за свою область
     "apps.core",
     "apps.accounts",
+    "apps.references",
 ]
 
 MIDDLEWARE = [

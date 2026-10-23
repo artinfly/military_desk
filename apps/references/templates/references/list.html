@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="breadcrumbs"><a href="{% url 'references:catalog' %}">Справочники</a> / {{ ref.title }}</div>
+
+<form class="toolbar" method="get">
+    <input class="input" type="search" name="q" value="{{ query }}" placeholder="Поиск по названию или коду">
+    <select class="input" name="status" onchange="this.form.submit()">
+        {% for value, label in status_choices.items %}
+        <option value="{{ value }}"{% if value == status %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button class="btn" type="submit">Найти</button>
+    {% if can_add %}
+    <a class="btn btn-primary toolbar-end" href="{% url 'references:add' ref.slug %}">Добавить</a>
+    {% endif %}
+</form>
+
+<div class="panel panel-flush">
+    {% if rows %}
+    <table class="table">
+        <thead>
+        <tr>
+            {% for column in columns %}<th>{{ column|capfirst }}</th>{% endfor %}
+            <th class="col-narrow">Код</th>
+            <th class="col-narrow">Действует</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for obj, values in rows %}
+        <tr>
+            {% for value in values %}
+            <td>
+                {% if forloop.first and can_change %}
+                <a href="{% url 'references:edit' ref.slug obj.pk %}">{{ value }}</a>
+                {% else %}{{ value|default:"—" }}{% endif %}
+            </td>
+            {% endfor %}
+            <td class="col-narrow muted">{{ obj.code|default:"—" }}</td>
+            <td class="col-narrow">
+                {% if obj.is_active %}<span class="badge badge-ok">Да</span>
+                {% else %}<span class="badge">Нет</span>{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Записей нет{% if query %} по запросу «{{ query }}»{% endif %}.</p>
+    {% endif %}
+</div>
+
+{% include "includes/pagination.html" %}
+{% endblock %}

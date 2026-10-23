@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+    <h2 class="panel-title">Добро пожаловать, {{ user.first_name|default:user.username }}</h2>
+    <p class="muted">Автоматизированная система «Военно-учётный стол»: учётные карточки, воинский учёт,
+        справочники, загрузка данных из кадровой системы и отчёты.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,123 @@
+/* Общие стили сайта. Только для ПК (минимальная ширина 1200px). */
+
+:root {
+    --bg: #f4f6f8;
+    --surface: #ffffff;
+    --border: #dfe3e8;
+    --text: #1f2933;
+    --muted: #6b7682;
+    --sidebar: #1f2d3a;
+    --sidebar-text: #c9d3dc;
+    --sidebar-active: #2f8f5b;
+    --accent: #2f8f5b;
+    --accent-dark: #25744a;
+    --danger: #b3261e;
+    --radius: 6px;
+    --font: "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    min-width: 1200px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 var(--font);
+}
+
+a { color: var(--accent-dark); }
+
+/* --- Каркас: меню слева, содержимое справа --- */
+
+.layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--sidebar);
+    color: var(--sidebar-text);
+    padding: 16px 12px;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; padding: 4px 8px 20px; }
+.brand-mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: var(--radius);
+    background: var(--accent); color: #fff; font-weight: 700; font-size: 13px;
+}
+.brand-name { color: #fff; font-weight: 600; line-height: 1.2; }
+
+.nav-section { margin-bottom: 16px; }
+.nav-title {
+    padding: 0 8px 6px; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .05em; color: #8796a5;
+}
+.nav-link {
+    display: block; padding: 7px 10px; border-radius: var(--radius);
+    color: var(--sidebar-text); text-decoration: none;
+}
+.nav-link:hover { background: rgba(255, 255, 255, .06); color: #fff; }
+.nav-link.active { background: var(--sidebar-active); color: #fff; }
+
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.page-title { margin: 0; font-size: 20px; font-weight: 600; }
+.user { display: flex; align-items: center; gap: 12px; }
+.user-name { color: var(--muted); }
+.user form { margin: 0; }
+
+.content { padding: 24px 28px; }
+
+/* --- Блоки и текст --- */
+
+.panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 24px;
+}
+.panel-title { margin: 0 0 8px; font-size: 16px; }
+.muted { color: var(--muted); }
+
+/* --- Сообщения --- */
+
+.messages { padding: 16px 28px 0; }
+.message {
+    padding: 10px 14px; border-radius: var(--radius); margin-bottom: 8px;
+    background: #e8f4ec; border: 1px solid #c3e2cf;
+}
+.message-error { background: #fbeaea; border-color: #f0c2c0; color: var(--danger); }
+
+/* --- Кнопки и поля --- */
+
+.btn {
+    display: inline-block; padding: 8px 16px; border: 1px solid var(--border);
+    border-radius: var(--radius); background: var(--surface); color: var(--text);
+    font: inherit; cursor: pointer; text-decoration: none;
+}
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-dark); }
+.btn-link { border: none; background: none; padding: 0; color: var(--accent-dark); }
+.btn-link:hover { text-decoration: underline; }
+.btn-block { display: block; width: 100%; }
+
+.field { display: block; margin-bottom: 14px; }
+.field-label { display: block; margin-bottom: 4px; color: var(--muted); }
+.field input {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: var(--radius); font: inherit;
+}
+.field input:focus { outline: 2px solid rgba(47, 143, 91, .25); border-color: var(--accent); }
+
+/* --- Страница входа --- */
+
+.login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.login-card {
+    width: 360px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 28px;
+}
+.brand-centered { justify-content: center; padding-bottom: 24px; }
+.brand-centered .brand-name { color: var(--text); }

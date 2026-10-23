@@ -1,8 +1,8 @@
-"""Настройки проекта «Военно-учётный стол».
+"""Общие настройки проекта «Военно-учётный стол» (для всех машин).
 
-Всё, что отличается от машины к машине (секретный ключ, режим отладки, доступ
-к базе), берётся из файла .env в корне проекта. Сам .env в git не попадает;
-образец со всеми переменными — .env.example.
+Всё, что отличается от машины к машине (секретный ключ, доступ к базе, адреса
+сайта), берётся из файла .env в корне проекта; образец — .env.example.
+Настройки конкретного окружения — в dev.py (разработка) и prod.py (сервер).
 """
 
 import os
@@ -12,7 +12,7 @@ from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Корень проекта — папка, где лежит manage.py
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 
@@ -26,20 +26,15 @@ def env(name, default=None):
     return value
 
 
-# --- Безопасность ---
+def env_list(name, default=""):
+    """Список из переменной .env через запятую."""
+    return [item.strip() for item in env(name, default).split(",") if item.strip()]
+
 
 SECRET_KEY = env("SECRET_KEY")
-# Режим отладки: подробные страницы ошибок. На рабочем сервере выключен.
-DEBUG = env("DEBUG", "False") == "True"
-# Адреса, по которым сайт можно открыть, через запятую
-ALLOWED_HOSTS = [
-    h.strip()
-    for h in env("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if h.strip()
-]
 
 
-# --- Приложения и обработка запросов ---
+# --- Приложения ---
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -48,7 +43,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "core",
+    # Приложения проекта (apps/): каждое отвечает за свою область
+    "apps.core",
+    "apps.accounts",
 ]
 
 MIDDLEWARE = [
@@ -57,6 +54,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Все страницы — только после входа (кроме помеченных login_not_required)
+    "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -67,13 +66,15 @@ WSGI_APPLICATION = "config.wsgi.application"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        # Общие шаблоны проекта (каркас страницы, вход); свои шаблоны у каждого приложения
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.core.context_processors.navigation",
             ],
         },
     },
@@ -96,8 +97,14 @@ DATABASES = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# --- Пароли пользователей: длина, не простые, не похожие на логин ---
+# --- Пользователи и вход ---
 
+AUTH_USER_MODEL = "accounts.User"
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "core:home"
+LOGOUT_REDIRECT_URL = "accounts:login"
+
+# Пароли: длина, не простые, не похожие на логин
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
@@ -119,13 +126,5 @@ USE_TZ = True
 # --- Статические файлы (CSS, JavaScript, картинки) ---
 
 STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
-
-# --- Почта: пока письма не отправляются, а печатаются в консоль ---
-
-MAILERS = {
-    "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
-    },
-}

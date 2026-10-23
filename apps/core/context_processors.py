@@ -11,14 +11,22 @@ def navigation(request):
     if user is None or not user.is_authenticated:
         return {"menu": []}
 
-    current = request.resolver_match.view_name if request.resolver_match else ""
+    match = request.resolver_match
+    current = match.view_name if match else ""
+    namespace = match.namespace if match else ""
+
+    def is_active(item):
+        if item.get("namespace"):
+            return item["namespace"] == namespace
+        return item["url_name"] == current
+
     menu = []
     for section in MENU:
         items = [
             {
                 "label": item["label"],
                 "url": reverse(item["url_name"]),
-                "active": item["url_name"] == current,
+                "active": is_active(item),
             }
             for item in section["items"]
             if not item.get("staff_only") or user.is_staff

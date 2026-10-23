@@ -4,6 +4,9 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.accounts.roles import VIEWER
+from apps.accounts.testing import make_user
+
 from . import models
 from .registry import REFERENCES, get_reference
 
@@ -66,7 +69,7 @@ class ReferenceModelTests(TestCase):
 class ReferenceViewsTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.operator = User.objects.create_user("operator")
+        cls.operator = make_user("viewer", VIEWER)
         cls.admin = User.objects.create_superuser("admin", password="x")
         models.MilitaryRank.objects.create(name="Рядовой", code="1")
         models.MilitaryRank.objects.create(name="Майор", code="15", is_active=False)

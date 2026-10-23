@@ -6,6 +6,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.accounts.roles import VIEWER
+from apps.accounts.testing import make_user
 from apps.military.models import MilitaryRecord
 from apps.references import models as ref
 
@@ -118,7 +120,7 @@ class SearchTests(TestCase):
 
 class PersonListViewTests(TestCase):
     def setUp(self):
-        self.client.force_login(User.objects.create_user("operator"))
+        self.client.force_login(make_user("viewer", VIEWER))
 
     def test_page_and_filters(self):
         for n in range(30):

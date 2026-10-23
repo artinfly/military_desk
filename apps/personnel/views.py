@@ -62,7 +62,15 @@ def bound_fieldsets(form, fieldsets):
 # --- Список ---
 
 
-class PersonListView(ListView):
+class ViewPersonRequired:
+    """Смотреть карточки — только с правом personnel.view_person."""
+
+    def dispatch(self, request, *args, **kwargs):
+        require_perm(request.user, "personnel.view_person")
+        return super().dispatch(request, *args, **kwargs)
+
+
+class PersonListView(ViewPersonRequired, ListView):
     """Список учётных карточек с фильтрами (как главное окно старой программы)."""
 
     template_name = "personnel/person_list.html"
@@ -108,7 +116,7 @@ class PersonListView(ListView):
 # --- Карточка ---
 
 
-class PersonDetailView(DetailView):
+class PersonDetailView(ViewPersonRequired, DetailView):
     """Карточка с вкладками; открытая вкладка — в адресе (?tab=…)."""
 
     template_name = "personnel/person_detail.html"
@@ -120,15 +128,21 @@ class PersonDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         person, user = self.object, self.request.user
         tab = self.request.GET.get("tab", "general")
-        sections = all_sections()
+        # Вкладки разделов — только те, что пользователю можно смотреть
+        sections = [s for s in all_sections() if user.has_perm(s.perm("view"))]
         context.update(
             page_title=person.full_name,
             tab=tab,
             tab_groups=[
-                (group, [s for s in sections if s.group == group])
+                (group, items)
                 for group in (PERSONAL, MILITARY)
+                if (items := [s for s in sections if s.group == group])
             ],
-            military=getattr(person, "military", None),
+            military=(
+                getattr(person, "military", None)
+                if user.has_perm("military.view_militaryrecord")
+                else None
+            ),
             can_change_person=user.has_perm("personnel.change_person"),
             can_delete_person=user.has_perm("personnel.delete_person"),
         )
@@ -139,6 +153,7 @@ class PersonDetailView(DetailView):
             return context
 
         section = get_section(tab)
+        require_perm(user, section.perm("view"))
         context.update(
             section=section,
             can_add=user.has_perm(section.perm("add")),

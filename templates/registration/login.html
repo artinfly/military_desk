@@ -1,0 +1,32 @@
+{% load static %}<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Вход — Военно-учётный стол</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="login-page">
+<form class="login-card" method="post" action="{% url 'accounts:login' %}">
+    {% csrf_token %}
+    <div class="brand brand-centered">
+        <span class="brand-mark">ВУС</span>
+        <span class="brand-name">Военно-учётный стол</span>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="message message-error">Неверный логин или пароль</div>
+    {% endif %}
+
+    <label class="field">
+        <span class="field-label">Логин</span>
+        <input type="text" name="username" value="{{ form.username.value|default:'' }}" autocomplete="username" autofocus required>
+    </label>
+    <label class="field">
+        <span class="field-label">Пароль</span>
+        <input type="password" name="password" autocomplete="current-password" required>
+    </label>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn btn-primary btn-block" type="submit">Войти</button>
+</form>
+</body>
+</html>

@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.accounts",
     "apps.references",
+    "apps.personnel",
+    "apps.military",
 ]
 
 MIDDLEWARE = [

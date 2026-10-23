@@ -76,6 +76,8 @@ REFERENCES = [
     ReferenceType("cities", models.City, ADDRESS),
     ReferenceType("streets", models.Street, ADDRESS),
     ReferenceType("address-types", models.AddressType, ADDRESS),
+    ReferenceType("attribute-types", models.AttributeType, OTHER),
+    ReferenceType("attribute-values", models.AttributeValue, OTHER),
     ReferenceType("family-statuses", models.FamilyStatus, OTHER),
     ReferenceType("relation-types", models.RelationType, OTHER),
     ReferenceType("languages", models.Language, OTHER),

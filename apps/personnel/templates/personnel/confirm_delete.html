@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<form class="panel form" method="post">
+    {% csrf_token %}
+    <p>{{ question }}</p>
+    <p class="muted">Отменить удаление будет нельзя.</p>
+    <div class="form-actions">
+        <button class="btn btn-danger" type="submit">Удалить</button>
+        <a class="btn" href="{{ cancel_url }}">Отмена</a>
+    </div>
+</form>
+{% endblock %}

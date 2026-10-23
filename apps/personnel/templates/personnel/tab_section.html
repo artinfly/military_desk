@@ -1,0 +1,34 @@
+{# Вкладка-список раздела карточки: таблица записей с действиями. #}
+<div class="toolbar">
+    <span class="muted">{{ section.title }}: {{ rows|length }}</span>
+    {% if can_add %}
+    <a class="btn btn-primary toolbar-end" href="{% url 'personnel:section_add' person.pk section.slug %}">Добавить</a>
+    {% endif %}
+</div>
+<div class="panel panel-flush">
+    {% if rows %}
+    <table class="table">
+        <thead>
+        <tr>
+            {% for header in headers %}<th>{{ header }}</th>{% endfor %}
+            {% if can_change or can_delete %}<th class="col-narrow"></th>{% endif %}
+        </tr>
+        </thead>
+        <tbody>
+        {% for item, values in rows %}
+        <tr>
+            {% for value in values %}<td>{{ value }}</td>{% endfor %}
+            {% if can_change or can_delete %}
+            <td class="col-narrow row-actions">
+                {% if can_change %}<a href="{% url 'personnel:section_edit' person.pk section.slug item.pk %}">Изменить</a>{% endif %}
+                {% if can_delete %}<a class="link-danger" href="{% url 'personnel:section_delete' person.pk section.slug item.pk %}">Удалить</a>{% endif %}
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Записей нет.</p>
+    {% endif %}
+</div>

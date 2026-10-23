@@ -1,0 +1,23 @@
+{# Форма по группам полей: fieldsets = [(заголовок или None, [поля формы]), …]. Поля — сеткой. #}
+{% if form.non_field_errors %}
+<div class="message message-error">{{ form.non_field_errors|join:" " }}</div>
+{% endif %}
+{% for title, fields in fieldsets %}
+<fieldset class="form-group">
+    {% if title %}<legend>{{ title }}</legend>{% endif %}
+    <div class="form-grid">
+        {% for field in fields %}
+        <div class="field{% if field.errors %} field-error{% endif %}">
+            {% if field.widget_type == "checkbox" %}
+            <label class="checkbox checkbox-field">{{ field }} {{ field.label }}</label>
+            {% else %}
+            <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+            {{ field }}
+            {% endif %}
+            {% if field.help_text %}<div class="field-help">{{ field.help_text }}</div>{% endif %}
+            {% for error in field.errors %}<div class="field-error-text">{{ error }}</div>{% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</fieldset>
+{% endfor %}

@@ -1,0 +1,26 @@
+{# Вкладка «Воинский учёт»: основные сведения блоками и кнопка правки. #}
+{% if record %}
+<div class="toolbar">
+    <span class="muted">Изменено {{ record.updated_at|date:"d.m.Y H:i" }}</span>
+    {% if can_change %}
+    <a class="btn btn-primary toolbar-end" href="{% url 'personnel:section_single' person.pk section.slug %}">Изменить</a>
+    {% endif %}
+</div>
+<div class="blocks">
+    {% for title, rows in record_fieldsets %}
+    <section class="panel">
+        <h2 class="panel-title">{{ title }}</h2>
+        <dl class="props">
+            {% for label, value in rows %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}
+        </dl>
+    </section>
+    {% endfor %}
+</div>
+{% else %}
+<div class="panel">
+    <p class="muted">Сведений о воинском учёте нет (не военнообязанный или ещё не заполнено).</p>
+    {% if can_add %}
+    <a class="btn btn-primary" href="{% url 'personnel:section_single' person.pk section.slug %}">Заполнить</a>
+    {% endif %}
+</div>
+{% endif %}

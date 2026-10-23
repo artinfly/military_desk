@@ -7,6 +7,7 @@
         <label class="filter">{{ form.status.label }} {{ form.status }}</label>
         <button class="btn btn-primary" type="submit">Найти</button>
         {% if has_filters %}<a class="btn" href="{% url 'personnel:list' %}">Сбросить</a>{% endif %}
+        {% if can_add %}<a class="btn btn-primary toolbar-end" href="{% url 'personnel:add' %}">Добавить карточку</a>{% endif %}
     </div>
     <div class="filters-grid">
         {% for field in form.selects %}
@@ -47,8 +48,7 @@
         <tr{% if person.dismissal_date %} class="row-muted"{% endif %}>
             <td>{{ person.tab_number }}</td>
             <td>
-                {% if user.is_staff %}<a href="{% url 'admin:personnel_person_change' person.pk %}">{{ person.full_name }}</a>
-                {% else %}{{ person.full_name }}{% endif %}
+                <a href="{% url 'personnel:detail' person.pk %}">{{ person.full_name }}</a>
             </td>
             <td>{{ person.military.rank|default:"—" }}</td>
             <td>{{ person.gender }}</td>

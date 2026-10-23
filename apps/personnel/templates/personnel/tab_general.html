@@ -1,0 +1,13 @@
+{# Вкладка «Общее»: основные данные карточки блоками. #}
+<div class="blocks">
+    {% for title, rows in general %}
+    <section class="panel">
+        <h2 class="panel-title">{{ title }}</h2>
+        <dl class="props">
+            {% for label, value in rows %}
+            <dt>{{ label }}</dt><dd>{{ value }}</dd>
+            {% endfor %}
+        </dl>
+    </section>
+    {% endfor %}
+</div>

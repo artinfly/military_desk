@@ -7,3 +7,9 @@ class MilitaryConfig(AppConfig):
     name = "apps.military"
     label = "military"
     verbose_name = "Воинский учёт"
+
+    def ready(self):
+        # Вкладки воинского учёта в учётной карточке
+        from .sections import register_sections
+
+        register_sections()

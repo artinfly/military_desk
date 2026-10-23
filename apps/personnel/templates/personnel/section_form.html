@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="breadcrumbs">
+    <a href="{% url 'personnel:list' %}">Учётные карточки</a> /
+    <a href="{% url 'personnel:detail' person.pk %}">{{ person.full_name }}</a> /
+    <a href="{{ cancel_url }}">{{ section.title }}</a>
+</div>
+
+<form class="panel form-wide" method="post">
+    {% csrf_token %}
+    {% include "includes/form_fieldsets.html" %}
+    <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Сохранить</button>
+        <a class="btn" href="{{ cancel_url }}">Отмена</a>
+    </div>
+</form>
+{% endblock %}

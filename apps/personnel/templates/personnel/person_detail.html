@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="breadcrumbs"><a href="{% url 'personnel:list' %}">Учётные карточки</a> / {{ person.full_name }}</div>
+
+{# --- Шапка карточки --- #}
+<section class="card-head panel">
+    <div>
+        <div class="card-name">{{ person.full_name }}</div>
+        <div class="card-meta muted">
+            Таб. № {{ person.tab_number }} · {{ person.department|default:"цех не указан" }}{% if person.position %} · {{ person.position }}{% endif %}
+        </div>
+        <div class="card-badges">
+            {% if person.dismissal_date %}<span class="badge">Уволен {{ person.dismissal_date|date:"d.m.Y" }}</span>
+            {% else %}<span class="badge badge-ok">Работает</span>{% endif %}
+            {% if military.is_reserved %}<span class="badge badge-ok">Забронирован</span>{% endif %}
+            {% if military.duty %}<span class="badge">{{ military.duty }}</span>{% endif %}
+            {% if person.is_svo %}<span class="badge badge-warn">СВО</span>{% endif %}
+        </div>
+    </div>
+    <div class="card-actions">
+        {% if can_change_person %}<a class="btn" href="{% url 'personnel:edit' person.pk %}">Изменить</a>{% endif %}
+        {% if can_delete_person %}<a class="btn btn-danger" href="{% url 'personnel:delete' person.pk %}">Удалить</a>{% endif %}
+        <div class="muted card-changed">Изменено {{ person.updated_at|date:"d.m.Y H:i" }}{% if person.updated_by %}, {{ person.updated_by.short_name }}{% endif %}</div>
+    </div>
+</section>
+
+{# --- Вкладки: ?tab=<раздел> --- #}
+<nav class="tabs">
+    <a class="tab{% if tab == 'general' %} active{% endif %}" href="?tab=general">Общее</a>
+    {% for group, sections in tab_groups %}
+    <span class="tabs-group">{{ group }}</span>
+    {% for s in sections %}
+    <a class="tab{% if tab == s.slug %} active{% endif %}" href="?tab={{ s.slug }}">{{ s.title }}</a>
+    {% endfor %}
+    {% endfor %}
+</nav>
+
+<div class="tab-body">
+    {% if tab == "general" %}
+        {% include "personnel/tab_general.html" %}
+    {% elif section.single %}
+        {% include section.template %}
+    {% else %}
+        {% include "personnel/tab_section.html" %}
+    {% endif %}
+</div>
+{% endblock %}

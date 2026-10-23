@@ -188,6 +188,53 @@ a { color: var(--accent-dark); }
 .row-muted td { color: var(--muted); }
 .badge-warn { background: #fdf0dc; color: #8a5a00; }
 
+/* --- Учётная карточка --- */
+
+.card-head { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 14px; }
+.card-name { font-size: 20px; font-weight: 600; }
+.card-meta { margin-top: 2px; }
+.card-badges { display: flex; gap: 6px; margin-top: 10px; }
+.card-actions { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: flex-end; gap: 8px; max-width: 360px; }
+.card-changed { width: 100%; text-align: right; font-size: 12px; }
+
+.tabs {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+    margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.tab {
+    padding: 5px 10px; border-radius: var(--radius); text-decoration: none;
+    color: var(--text); font-size: 13px;
+}
+.tab:hover { background: #eef1f4; }
+.tab.active { background: var(--accent); color: #fff; }
+.tabs-group {
+    margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--border);
+    font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+}
+
+.blocks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.props { display: grid; grid-template-columns: minmax(140px, 42%) 1fr; gap: 6px 12px; margin: 0; }
+.props dt { color: var(--muted); }
+.props dd { margin: 0; overflow-wrap: anywhere; }
+
+.row-actions { display: flex; gap: 12px; }
+.link-danger { color: var(--danger); }
+.btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+/* --- Формы по группам полей --- */
+
+.form-wide { max-width: 1100px; }
+.form-group { border: none; padding: 0; margin: 0 0 18px; }
+.form-group legend { font-weight: 600; margin-bottom: 10px; padding: 0; }
+.form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 16px; }
+.form-grid .field input[type="text"], .form-grid .field input[type="number"],
+.form-grid .field input[type="email"], .form-grid .field select { width: 100%; max-width: none; }
+.field input[type="email"], .field input[type="date"] {
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius); font: inherit;
+}
+.form-grid .field input[type="date"] { width: 100%; }
+.checkbox-field { margin-top: 24px; }
+
 /* --- Каталог справочников --- */
 
 .catalog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }

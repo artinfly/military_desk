@@ -24,7 +24,8 @@ class RegistryTests(TestCase):
 
     def test_extra_fields(self):
         self.assertEqual(get_reference("departments").extra_fields, ["number"])
-        self.assertEqual(get_reference("military-ranks").extra_fields, [])
+        self.assertEqual(get_reference("military-ranks").extra_fields, ["is_officer"])
+        self.assertEqual(get_reference("regions").extra_fields, [])
         self.assertEqual(
             get_reference("branches").form_fields,
             ["name", "address", "code", "sort_order", "is_active"],

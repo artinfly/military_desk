@@ -20,6 +20,11 @@ MENU = [
         "title": "Данные",
         "items": [
             {
+                "label": "Учётные карточки",
+                "url_name": "personnel:list",
+                "namespace": "personnel",
+            },
+            {
                 "label": "Справочники",
                 "url_name": "references:catalog",
                 "namespace": "references",

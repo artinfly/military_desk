@@ -42,10 +42,15 @@ def seed_references():
     """Справочники: создаёт недостающие записи, существующие не трогает."""
     for model_name, names in data.REFERENCES.items():
         model = getattr(ref, model_name)
+        codes = data.REFERENCE_CODES.get(model_name, {})
         for order, name in enumerate(names, 1):
             model.objects.get_or_create(
-                name=name, defaults={"sort_order": order, "code": str(order)}
+                name=name,
+                defaults={"sort_order": order, "code": codes.get(name, str(order))},
             )
+    ranks = data.REFERENCES["MilitaryRank"]
+    officers = ranks[ranks.index(data.OFFICER_RANKS_FROM) :]
+    ref.MilitaryRank.objects.filter(name__in=officers).update(is_officer=True)
     for order, name in enumerate(data.CITIES, 1):
         ref.City.objects.get_or_create(
             name=name, defaults={"code": f"6600000{order:04d}", "sort_order": order}
@@ -301,9 +306,13 @@ class PeopleGenerator:
             record.document_number = self.digits(7)
             record.document_date = person.birth_date + timedelta(days=17 * 366)
         else:
-            composition = self.rnd.choices(
-                list(RANK_COMPOSITION), weights=COMPOSITION_WEIGHTS
-            )[0]
+            # Звание по возрасту: прапорщики — с 21 года, младшие офицеры — с 23, старшие — с 30
+            min_age = [0, 0, 21, 23, 30]
+            weights = [
+                w if age >= limit else 0
+                for w, limit in zip(COMPOSITION_WEIGHTS, min_age)
+            ]
+            composition = self.rnd.choices(list(RANK_COMPOSITION), weights=weights)[0]
             record.duty = self.get("MilitaryDuty", "Военнообязанный")
             record.document_type = self.get("RegistrationDocument", "Военный билет")
             record.document_series = self.rnd.choice(["АВ", "АЕ", "АК", "АС"])
@@ -318,9 +327,11 @@ class PeopleGenerator:
             record.reserve_category = self.pick("ReserveCategory")
             record.speciality = self.pick("MilitarySpeciality")
             reserved = self.chance(20)
-            record.special_account_type = self.get(
-                "SpecialAccountType", "Специальный учёт" if reserved else "Общий учёт"
+            team = not reserved and not person.dismissal_date and self.chance(10)
+            account_type = (
+                "Спец. учёт" if reserved else "Команда" if team else "Общий учёт"
             )
+            record.special_account_type = self.get("SpecialAccountType", account_type)
             if reserved and person.dismissal_date:
                 record.unreservation_order = f"{self.rnd.randint(1, 300)}-р"
                 self.add(

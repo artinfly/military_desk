@@ -1,3 +1,4 @@
+from datetime import date
 from io import StringIO
 
 from django.core.management import call_command
@@ -43,6 +44,9 @@ class SeedDemoTests(TestCase):
             self.assertTrue(record.reservation_document)
         for record in records.filter(duty__name="Призывник"):
             self.assertIsNone(record.rank)
+        today = date.today()
+        for record in records.filter(rank__is_officer=True).select_related("person"):
+            self.assertGreaterEqual((today - record.person.birth_date).days // 365, 23)
 
     def test_same_seed_same_people(self):
         seed(count=20, seed_value=7)

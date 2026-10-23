@@ -65,6 +65,12 @@ class Reference(models.Model):
 
 
 class MilitaryRank(Reference):
+    is_officer = models.BooleanField(
+        "Офицерское",
+        default=False,
+        help_text="Для фильтра «Офицеры» и отчёта по численности.",
+    )
+
     class Meta(Reference.Meta):
         verbose_name = "воинское звание"
         verbose_name_plural = "воинские звания"

@@ -162,6 +162,32 @@ a { color: var(--accent-dark); }
 
 .pagination { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
 
+/* --- Фильтры списка карточек --- */
+
+.filters { padding: 14px 18px; margin-bottom: 14px; }
+.filters-row, .filters-flags { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.filters-search { width: 360px; }
+.filters-grid {
+    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px; margin: 12px 0;
+}
+.filter { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.filters-row .filter { flex-direction: row; align-items: center; gap: 8px; color: var(--muted); }
+.filter-label { font-size: 12px; color: var(--muted); }
+.filters input, .filters select {
+    padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius);
+    font: inherit; background: var(--surface); min-width: 0; width: 100%;
+}
+.filters-row select { width: auto; }
+.filters .checkbox input { width: auto; }
+.list-summary { margin-bottom: 8px; }
+
+.table-compact td, .table-compact th { padding: 6px 10px; font-size: 13px; }
+.table th a.sort { color: inherit; text-decoration: none; }
+.table th a.sort:hover, .table th a.sort-active { color: var(--text); }
+.row-muted td { color: var(--muted); }
+.badge-warn { background: #fdf0dc; color: #8a5a00; }
+
 /* --- Каталог справочников --- */
 
 .catalog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }

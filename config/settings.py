@@ -20,7 +20,9 @@ def env(name, default=None):
     """Значение из .env; без значения по умолчанию переменная обязательна."""
     value = os.getenv(name, default)
     if value is None:
-        raise ImproperlyConfigured(f"В .env не задана переменная {name} (см. .env.example)")
+        raise ImproperlyConfigured(
+            f"В .env не задана переменная {name} (см. .env.example)"
+        )
     return value
 
 
@@ -30,7 +32,11 @@ SECRET_KEY = env("SECRET_KEY")
 # Режим отладки: подробные страницы ошибок. На рабочем сервере выключен.
 DEBUG = env("DEBUG", "False") == "True"
 # Адреса, по которым сайт можно открыть, через запятую
-ALLOWED_HOSTS = [h.strip() for h in env("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in env("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if h.strip()
+]
 
 
 # --- Приложения и обработка запросов ---
@@ -93,7 +99,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # --- Пароли пользователей: длина, не простые, не похожие на логин ---
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},

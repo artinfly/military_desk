@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<form class="filters panel" method="get">
+    <div class="filters-row">
+        <div class="filters-search">{{ form.q }}</div>
+        <label class="filter">{{ form.status.label }} {{ form.status }}</label>
+        <button class="btn btn-primary" type="submit">Найти</button>
+        {% if has_filters %}<a class="btn" href="{% url 'personnel:list' %}">Сбросить</a>{% endif %}
+    </div>
+    <div class="filters-grid">
+        {% for field in form.selects %}
+        <label class="filter">
+            <span class="filter-label">{{ field.label }}</span>
+            {{ field }}
+        </label>
+        {% endfor %}
+    </div>
+    <div class="filters-flags">
+        {% for field in form.flags %}
+        <label class="checkbox">{{ field }} {{ field.label }}</label>
+        {% endfor %}
+    </div>
+    {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+</form>
+
+<div class="list-summary muted">Найдено: {{ paginator.count }}</div>
+
+<div class="panel panel-flush">
+    {% if object_list %}
+    <table class="table table-compact">
+        <thead>
+        <tr>
+            {% for column in columns %}
+            <th>
+                {% if column.key %}
+                <a class="sort{% if column.active %} sort-active{% endif %}" href="?{% if filter_params %}{{ filter_params }}&{% endif %}sort={{ column.next }}">
+                    {{ column.title }}{% if column.active %} {% if column.descending %}↓{% else %}↑{% endif %}{% endif %}
+                </a>
+                {% else %}{{ column.title }}{% endif %}
+            </th>
+            {% endfor %}
+        </tr>
+        </thead>
+        <tbody>
+        {% for person in object_list %}
+        <tr{% if person.dismissal_date %} class="row-muted"{% endif %}>
+            <td>{{ person.tab_number }}</td>
+            <td>
+                {% if user.is_staff %}<a href="{% url 'admin:personnel_person_change' person.pk %}">{{ person.full_name }}</a>
+                {% else %}{{ person.full_name }}{% endif %}
+            </td>
+            <td>{{ person.military.rank|default:"—" }}</td>
+            <td>{{ person.gender }}</td>
+            <td>{{ person.birth_date|date:"d.m.Y" }}</td>
+            <td>{{ person.dismissal_date|date:"d.m.Y"|default:"—" }}</td>
+            <td>{{ person.military.duty|default:"—" }}</td>
+            <td>{{ person.department|default:"—" }}</td>
+            <td>{{ person.military.special_account_type|default:"—" }}</td>
+            <td>
+                {% if person.military.is_reserved %}<span class="badge badge-ok" title="{{ person.military.reservation_document }}">Да</span>{% endif %}
+            </td>
+            <td>{% if person.is_svo %}<span class="badge badge-warn">СВО</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Никого не найдено. Измените условия поиска.</p>
+    {% endif %}
+</div>
+
+{% include "includes/pagination.html" %}
+{% endblock %}

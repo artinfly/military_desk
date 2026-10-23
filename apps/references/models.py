@@ -250,6 +250,23 @@ class AddressType(Reference):
         verbose_name_plural = "типы адреса"
 
 
+# --- Дополнительные атрибуты карточки ---
+
+
+class AttributeType(Reference):
+    """Вид дополнительного атрибута (например, участие в боевых действиях)."""
+
+    class Meta(Reference.Meta):
+        verbose_name = "вид доп. атрибута"
+        verbose_name_plural = "виды доп. атрибутов"
+
+
+class AttributeValue(Reference):
+    class Meta(Reference.Meta):
+        verbose_name = "значение доп. атрибута"
+        verbose_name_plural = "значения доп. атрибутов"
+
+
 # --- Прочее ---
 
 

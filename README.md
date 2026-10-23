@@ -98,7 +98,7 @@ apps/
                    снятие с учёта, награды, спецучёт, увольнения забронированных
   demo/            генератор вымышленных данных (seed_demo), только для разработки
 templates/         общие шаблоны: каркас страницы (base.html), вход, includes/ (формы, страницы)
-static/            CSS
+static/            CSS (в стиле supply_service: тёмная панель, оранжевый акцент) и шрифт Golos Text
 manage.py          команды проекта: runserver, migrate, createsuperuser, test и др.
 pyproject.toml     правила форматирования black и isort
 requirements.txt   библиотеки с точными версиями

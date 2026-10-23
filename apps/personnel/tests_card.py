@@ -6,6 +6,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.accounts.roles import VIEWER
+from apps.accounts.testing import make_user
 from apps.military.models import MilitaryRecord
 from apps.references import models as ref
 
@@ -20,7 +22,7 @@ class CardTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.admin = User.objects.create_superuser("admin", password="x")
-        cls.operator = User.objects.create_user("operator")
+        cls.operator = make_user("viewer", VIEWER)
         cls.passport = ref.RegistrationDocument.objects.create(name="Паспорт")
         cls.son = ref.RelationType.objects.create(name="Сын")
         cls.private = ref.MilitaryRank.objects.create(name="Рядовой")
@@ -57,7 +59,7 @@ class CardViewTests(CardTestCase):
         response = self.client.get(self.url("detail"), {"tab": "nothing"})
         self.assertEqual(response.status_code, 404)
 
-    def test_operator_without_permissions(self):
+    def test_viewer_cannot_edit(self):
         self.client.force_login(self.operator)
         response = self.client.get(self.url("detail"), {"tab": "documents"})
         self.assertEqual(response.status_code, 200)

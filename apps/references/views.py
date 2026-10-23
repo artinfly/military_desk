@@ -27,11 +27,22 @@ class CatalogView(TemplateView):
     template_name = "references/catalog.html"
     extra_context = {"page_title": "Справочники"}
 
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_module_perms("references"):
+            raise PermissionDenied("Нет доступа к справочникам")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
+        visible = [
+            (title, [ref for ref in refs if user.has_perm(ref.perm("view"))])
+            for title, refs in sections()
+        ]
         context["sections"] = [
             (title, [(ref, ref.model.objects.count()) for ref in refs])
-            for title, refs in sections()
+            for title, refs in visible
+            if refs
         ]
         return context
 
@@ -41,6 +52,8 @@ class ReferenceMixin:
 
     def dispatch(self, request, *args, **kwargs):
         self.ref = get_reference(kwargs["slug"])
+        if not request.user.has_perm(self.ref.perm("view")):
+            raise PermissionDenied("Нет доступа к справочнику")
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):

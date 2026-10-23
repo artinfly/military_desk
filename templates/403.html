@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{# Страница «Нет доступа»: Django показывает её при PermissionDenied (ошибка 403). #}
+
+{% block head_title %}Нет доступа{% endblock %}
+{% block heading %}Нет доступа{% endblock %}
+
+{% block content %}
+<section class="panel">
+    <h2 class="panel-title">У вас нет прав на эту страницу или действие</h2>
+    <p class="muted">Если доступ нужен для работы, обратитесь к администратору: он назначит вам роль.</p>
+    <a class="btn" href="{% url 'core:home' %}">На главную</a>
+</section>
+{% endblock %}

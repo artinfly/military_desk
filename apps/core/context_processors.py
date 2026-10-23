@@ -5,6 +5,17 @@ from django.urls import reverse
 from .navigation import MENU
 
 
+def is_allowed(user, item):
+    """Пункт меню доступен пользователю (персонал, право, любое право приложения)."""
+    if item.get("staff_only") and not user.is_staff:
+        return False
+    if item.get("perm") and not user.has_perm(item["perm"]):
+        return False
+    if item.get("module") and not user.has_module_perms(item["module"]):
+        return False
+    return True
+
+
 def navigation(request):
     """Меню для текущего пользователя: без недоступных пунктов и пустых разделов."""
     user = getattr(request, "user", None)
@@ -29,7 +40,7 @@ def navigation(request):
                 "active": is_active(item),
             }
             for item in section["items"]
-            if not item.get("staff_only") or user.is_staff
+            if is_allowed(user, item)
         ]
         if items:
             menu.append({"title": section["title"], "items": items})

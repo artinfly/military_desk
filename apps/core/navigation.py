@@ -33,6 +33,12 @@ MENU = [
                 "namespace": "references",
                 "module": "references",
             },
+            {
+                "label": "Операции",
+                "url_name": "military:operations",
+                "namespace": "military",
+                "perm": "military.change_militaryrecord",
+            },
         ],
     },
     {

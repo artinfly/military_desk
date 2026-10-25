@@ -14,6 +14,10 @@ class DateInput(forms.DateInput):
         super().__init__(attrs, format="%Y-%m-%d")
 
 
+# Пустой пункт выпадающего списка (своя подпись: в Django 6.1 стандартная не переведена)
+EMPTY_CHOICE = "— не выбрано —"
+
+
 def formfield_callback(field, **kwargs):
     """Поля дат — с календарём; остальные — как обычно."""
     if isinstance(field, models.DateField) and not isinstance(
@@ -25,13 +29,21 @@ def formfield_callback(field, **kwargs):
 
 class BaseModelForm(forms.ModelForm):
     """Форма модели: даты с календарём; в списках справочников — только действующие
-    записи плюс уже выбранная (даже если её пометили недействующей)."""
+    записи плюс уже выбранная (даже если её пометили недействующей); пустой пункт
+    списков — по-русски."""
 
     formfield_callback = formfield_callback
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
+            if getattr(field, "empty_label", None) is not None:
+                field.empty_label = EMPTY_CHOICE
+            elif isinstance(field, forms.ChoiceField):
+                field.choices = [
+                    (value, EMPTY_CHOICE if value == "" else label)
+                    for value, label in field.choices
+                ]
             queryset = getattr(field, "queryset", None)
             if queryset is None or not hasattr(queryset, "active"):
                 continue

@@ -101,6 +101,13 @@ class CardEditTests(CardTestCase):
         self.assertEqual(person.updated_by, self.admin)
         self.assertEqual(person.birth_date, date(1991, 2, 3))
 
+    def test_empty_choice_in_russian(self):
+        response = self.client.get(reverse("personnel:add"))
+        self.assertContains(
+            response, '<option value="" selected>— не выбрано —</option>'
+        )
+        self.assertNotContains(response, "Select an option")
+
     def test_dismissal_before_hire(self):
         response = self.client.post(
             self.url("edit"),

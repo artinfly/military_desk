@@ -129,6 +129,10 @@ a { color: var(--accent-dark); }
     background: var(--ok-bg); border: 1px solid rgba(22, 163, 74, .25);
 }
 .message-error { background: #fdf0ef; border-color: #f3c9c4; color: var(--danger); }
+.message-warning { background: #fdf6ec; border-color: #f1d9b5; color: #8a5a14; }
+
+.operations { display: grid; gap: 16px; max-width: 760px; }
+.operations .panel p { margin: 0 0 12px; }
 
 /* --- Кнопки и поля --- */
 
@@ -221,7 +225,8 @@ a { color: var(--accent-dark); }
 }
 .filters-row select { width: auto; }
 .filters .checkbox input { width: auto; }
-.list-summary { margin-bottom: 8px; }
+.list-summary { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.btn-small { padding: 3px 10px; font-size: 13px; }
 
 .table-compact td, .table-compact th { padding: 6px 10px; font-size: 13px; }
 .table th a.sort { color: inherit; text-decoration: none; }

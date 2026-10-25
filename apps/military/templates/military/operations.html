@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="operations">
+    <form class="panel" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="account_type">
+        <h2 class="panel-title">Смена группы учёта</h2>
+        <p class="muted">У всех незабронированных с текущей группой ставится новая (или группа убирается).</p>
+        {% include "includes/form_fields.html" with form=account_form %}
+        <div class="form-actions">
+            <button class="btn btn-primary" type="submit">Сменить</button>
+        </div>
+    </form>
+
+    <form class="panel" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="dismissed">
+        <h2 class="panel-title">Обновление спец. уволенных</h2>
+        <p class="muted">
+            Кто снова работает — убирается из списка увольнений забронированных;
+            уволенные забронированные добавляются (удостоверение и дата увольнения);
+            у всех уволенных снимается бронь.
+        </p>
+        <div class="form-actions">
+            <button class="btn btn-primary" type="submit">Обновить</button>
+        </div>
+    </form>
+
+    <form class="panel" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="unreserve">
+        <h2 class="panel-title">Разбронирование по файлу</h2>
+        <p class="muted">
+            Работающим из файла снимается бронь, ставится группа «Общий учёт»,
+            записывается номер приказа, удостоверение об отсрочке очищается.
+        </p>
+        {% include "includes/form_fields.html" with form=unreserve_form %}
+        <div class="form-actions">
+            <button class="btn btn-primary" type="submit">Разбронировать</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

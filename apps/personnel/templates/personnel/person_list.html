@@ -25,7 +25,10 @@
     {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
 </form>
 
-<div class="list-summary muted">Найдено: {{ paginator.count }}</div>
+<div class="list-summary">
+    <span class="muted">Найдено: {{ paginator.count }}</span>
+    <a class="btn btn-small" href="{% url 'reports:filter' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">Выгрузить в Excel</a>
+</div>
 
 <div class="panel panel-flush">
     {% if object_list %}

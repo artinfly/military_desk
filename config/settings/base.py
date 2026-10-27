@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     "apps.personnel",
     "apps.military",
     "apps.reports",
+    # Перенос из старой программы (команда import_legacy)
+    "apps.legacy",
 ]
 
 MIDDLEWARE = [

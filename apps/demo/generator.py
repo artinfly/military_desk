@@ -310,7 +310,7 @@ class PeopleGenerator:
             min_age = [0, 0, 21, 23, 30]
             weights = [
                 w if age >= limit else 0
-                for w, limit in zip(COMPOSITION_WEIGHTS, min_age)
+                for w, limit in zip(COMPOSITION_WEIGHTS, min_age, strict=True)
             ]
             composition = self.rnd.choices(list(RANK_COMPOSITION), weights=weights)[0]
             record.duty = self.get("MilitaryDuty", "Военнообязанный")

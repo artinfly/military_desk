@@ -26,6 +26,11 @@ def env(name, default=None):
     return value
 
 
+def env_bool(name, default=False):
+    """Да/нет из .env: True, 1, yes, on — да."""
+    return env(name, str(default)).strip().lower() in ("1", "true", "yes", "on")
+
+
 def env_list(name, default=""):
     """Список из переменной .env через запятую."""
     return [item.strip() for item in env(name, default).split(",") if item.strip()]
@@ -54,6 +59,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Раздача статики (CSS, шрифты) самим Django — отдельный веб-сервер не нужен
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -117,6 +124,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# Если несколько сервисов открываются по одному имени сервера (разные порты/пути),
+# у каждого должны быть свои cookie, иначе вход в одном выбивает из другого
+SESSION_COOKIE_NAME = env("SESSION_COOKIE_NAME", "sessionid")
+CSRF_COOKIE_NAME = env("CSRF_COOKIE_NAME", "csrftoken")
 
 
 # --- Язык и время ---

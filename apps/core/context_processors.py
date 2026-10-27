@@ -11,9 +11,7 @@ def is_allowed(user, item):
         return False
     if item.get("perm") and not user.has_perm(item["perm"]):
         return False
-    if item.get("module") and not user.has_module_perms(item["module"]):
-        return False
-    return True
+    return not item.get("module") or user.has_module_perms(item["module"])
 
 
 def navigation(request):

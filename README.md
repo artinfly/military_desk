@@ -10,8 +10,11 @@
 ## Что нужно заранее
 
 - Python 3.14
-- PostgreSQL (16 и новее)
+- PostgreSQL (16 и новее); папка `PostgreSQL\<версия>\bin` в PATH — драйвер `psycopg`
+  использует библиотеку PostgreSQL оттуда
 - git
+
+Версии библиотек в `requirements.txt` — как на рабочем сервере.
 
 ## Установка с нуля
 
@@ -200,9 +203,22 @@ requirements.txt   библиотеки с точными версиями
 
 ## Настройки разработки и сервера
 
-`manage.py` по умолчанию использует `config.settings.dev` (режим отладки).
-На рабочем сервере в `.env` задаётся `DJANGO_SETTINGS_MODULE=config.settings.prod`:
-отладка выключена, адреса сайта (`ALLOWED_HOSTS`) обязательны.
+`manage.py` по умолчанию использует `config.settings.dev` (режим отладки),
+`wsgi.py` (gunicorn) — `config.settings.prod`: отладка выключена, адреса сайта
+(`ALLOWED_HOSTS`) обязательны, статику раздаёт whitenoise.
+
+Запуск на сервере:
+
+```bash
+export DJANGO_SETTINGS_MODULE=config.settings.prod
+python manage.py migrate
+python manage.py collectstatic --noinput
+gunicorn config.wsgi --bind 127.0.0.1:8000
+```
+
+За nginx в `.env` сервера задаются `USE_X_FORWARDED_HOST` и `CSRF_TRUSTED_ORIGINS`;
+если несколько сервисов открываются по одному имени — свои `SESSION_COOKIE_NAME`
+и `CSRF_COOKIE_NAME` (см. `.env.example`).
 
 ## Тесты и форматирование
 

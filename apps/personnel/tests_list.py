@@ -11,7 +11,7 @@ from apps.accounts.testing import make_user
 from apps.military.models import MilitaryRecord
 from apps.references import models as ref
 
-from .models import AdditionalAttribute, Person
+from .models import AdditionalAttribute
 from .services import search_people, sort_people
 from .tests import make_person
 

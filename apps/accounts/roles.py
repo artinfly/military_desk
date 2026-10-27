@@ -41,11 +41,12 @@ ROLES = {
 def role_permissions(role):
     """Права роли (queryset Permission) по описанию в ROLES."""
     spec = ROLES[role]
-    ids = []
-    for app_label, actions in spec["apps"].items():
-        for perm in Permission.objects.filter(content_type__app_label=app_label):
-            if perm.codename.split("_", 1)[0] in actions:
-                ids.append(perm.pk)
+    ids = [
+        perm.pk
+        for app_label, actions in spec["apps"].items()
+        for perm in Permission.objects.filter(content_type__app_label=app_label)
+        if perm.codename.split("_", 1)[0] in actions
+    ]
     permissions = Permission.objects.filter(pk__in=ids)
     for label, codename in (p.split(".") for p in spec["except"]):
         permissions = permissions.exclude(

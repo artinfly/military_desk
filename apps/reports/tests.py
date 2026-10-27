@@ -57,7 +57,7 @@ class FilterReportTests(TestCase):
         rows = list(sheet.values)
         self.assertEqual(list(rows[0]), FILTER_REPORT_HEADERS)
         self.assertEqual(len(rows), 2)  # уволенный Сидоров отфильтрован
-        row = dict(zip(FILTER_REPORT_HEADERS, rows[1]))
+        row = dict(zip(FILTER_REPORT_HEADERS, rows[1], strict=True))
         self.assertEqual(row["Фамилия имя отчество"], "Петров Пётр Петрович")
         self.assertEqual(row["Паспорт, СНИЛС"], "4600 123456, СНИЛС 123-456-789 01")
         self.assertIn("д. 5", row["Место жительства"])

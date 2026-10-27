@@ -1,5 +1,19 @@
-Django==6.1.2
-psycopg[binary]==3.3.6
-python-dotenv==1.2.4
-openpyxl==3.1.5
-et-xmlfile==2.0.0
+# Зависимости проекта. Установка: pip install -r requirements.txt
+# Версии — как на рабочем сервере (пакеты там не обновляются).
+
+# --- Каркас и окружение ---
+Django==6.1.1                  # веб-фреймворк
+psycopg==3.3.5                 # драйвер PostgreSQL (нужен PostgreSQL\bin в PATH)
+python-dotenv==1.2.3           # чтение настроек из .env
+whitenoise==6.12.0             # раздача статики на сервере
+gunicorn==26.2.0               # запуск на сервере (Linux)
+
+# --- Документы ---
+openpyxl==3.1.5                # .xlsx (отчёты, загрузка списков)
+
+# --- Устанавливаются автоматически вместе с пакетами выше ---
+# Закреплены, чтобы на всех машинах стояли одинаковые версии.
+asgiref==3.12.1                # Django
+sqlparse==0.6.0                # Django
+tzdata==2026.3                 # Django (часовые пояса на Windows)
+et_xmlfile==2.0.0              # openpyxl

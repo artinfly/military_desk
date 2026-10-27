@@ -11,3 +11,7 @@ ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 # Письма не отправляются, а печатаются в консоль
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# Статика отдаётся без collectstatic и подхватывает правки без перезапуска
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_AUTOREFRESH = True

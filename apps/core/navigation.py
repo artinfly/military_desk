@@ -34,6 +34,12 @@ MENU = [
                 "module": "references",
             },
             {
+                "label": "Отчёты",
+                "url_name": "reports:list",
+                "namespace": "reports",
+                "perm": "military.view_militaryrecord",
+            },
+            {
                 "label": "Операции",
                 "url_name": "military:operations",
                 "namespace": "military",

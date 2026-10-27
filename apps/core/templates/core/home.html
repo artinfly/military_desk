@@ -13,4 +13,21 @@
     <div class="message message-error">У вас пока нет роли, поэтому разделы недоступны. Обратитесь к администратору.</div>
     {% endif %}
 </section>
+
+{% if figures %}
+<div class="figures">
+    {% for figure in figures %}
+    <div class="figure">
+        <div class="figure-value">{{ figure.value }}</div>
+        <div class="figure-title">{{ figure.title }}</div>
+        {% if figure.details %}
+        <div class="figure-details muted">
+            {% for name, value in figure.details %}из них {{ name }}: {{ value }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+<p class="muted"><a href="{% url 'reports:list' %}">Все отчёты</a> · численность в Excel — отчёт «Численность».</p>
+{% endif %}
 {% endblock %}

@@ -132,6 +132,18 @@ a { color: var(--accent-dark); }
 .message-warning { background: #fdf6ec; border-color: #f1d9b5; color: #8a5a14; }
 
 .operations { display: grid; gap: 16px; max-width: 760px; }
+
+.report-list { display: grid; gap: 12px; max-width: 980px; }
+.report { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+.report-text p { margin: 0; }
+.report-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.report-actions input { width: 140px; }
+
+.figures { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+.figure { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 14px 16px; }
+.figure-value { font-size: 28px; font-weight: 600; line-height: 1.1; }
+.figure-title { margin-top: 4px; }
+.figure-details { margin-top: 6px; font-size: 13px; }
 .operations .panel p { margin: 0 0 12px; }
 
 /* --- Кнопки и поля --- */

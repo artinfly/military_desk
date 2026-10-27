@@ -74,7 +74,7 @@ class RoleAccessTests(TestCase):
         home = self.client.get(reverse("core:home"))
         self.assertContains(home, "Ваши роли: Просмотр")
         self.assertEqual(
-            self.menu(home), ["Главная", "Учётные карточки", "Справочники"]
+            self.menu(home), ["Главная", "Учётные карточки", "Справочники", "Отчёты"]
         )
         card = self.client.get(
             reverse("personnel:detail", args=[self.person.pk]), {"tab": "military"}

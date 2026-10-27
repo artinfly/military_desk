@@ -11,7 +11,7 @@ from apps.personnel.models import Address, IdentityDocument, Relative
 from apps.personnel.tests import make_person
 from apps.references import models as ref
 
-from .services import FILTER_REPORT_HEADERS
+from .services.filter_report import FILTER_REPORT_HEADERS
 
 
 class FilterReportTests(TestCase):

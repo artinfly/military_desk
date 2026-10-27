@@ -83,6 +83,12 @@ class MilitaryDuty(Reference):
 
 
 class MilitarySpeciality(Reference):
+    in_reservation_list = models.BooleanField(
+        "В перечне для приложения 1",
+        default=False,
+        help_text="ВУС из перечня: человек попадает в приложение 1 формы бронирования.",
+    )
+
     class Meta(Reference.Meta):
         verbose_name = "ВУС"
         verbose_name_plural = "ВУС"
@@ -131,6 +137,13 @@ class ArmyPosition(Reference):
 
 
 class RegistrationDocument(Reference):
+    in_reservation_appendix = models.BooleanField(
+        "Отдельно в приложении 2",
+        default=False,
+        help_text="Люди с таким документом идут в приложение 2 формы бронирования, "
+        "а не в саму форму и приложение 1.",
+    )
+
     class Meta(Reference.Meta):
         verbose_name = "документ воинского учёта"
         verbose_name_plural = "документы воинского учёта"

@@ -1,4 +1,4 @@
-"""Общая сборка отчётов Excel: оформленная таблица и ответ для скачивания."""
+"""Общая сборка отчётов Excel: оформленные таблицы и ответ для скачивания."""
 
 from io import BytesIO
 from urllib.parse import quote
@@ -13,10 +13,8 @@ HEADER_FONT = Font(bold=True, color="FFFFFF")
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
-def build_workbook(title, headers, rows):
-    """Книга с одним листом: шапка (закреплена, с автофильтром) и строки. Возвращает байты."""
-    book = Workbook()
-    sheet = book.active
+def _fill_sheet(sheet, title, headers, rows):
+    """Лист: шапка (закреплена, с автофильтром), строки, ширина колонок по данным."""
     sheet.title = title[:31]  # ограничение Excel на имя листа
     sheet.append(headers)
     for row in rows:
@@ -43,9 +41,21 @@ def build_workbook(title, headers, rows):
             if hasattr(cell.value, "year"):
                 cell.number_format = "DD.MM.YYYY"
 
+
+def build_sheets(sheets):
+    """Книга из листов [(название, шапка, строки)]. Возвращает байты файла."""
+    book = Workbook()
+    book.remove(book.active)
+    for title, headers, rows in sheets:
+        _fill_sheet(book.create_sheet(), title, headers, rows)
     content = BytesIO()
     book.save(content)
     return content.getvalue()
+
+
+def build_workbook(title, headers, rows):
+    """Книга с одним листом."""
+    return build_sheets([(title, headers, rows)])
 
 
 def xlsx_response(content, filename):

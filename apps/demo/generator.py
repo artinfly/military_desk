@@ -51,6 +51,12 @@ def seed_references():
     ranks = data.REFERENCES["MilitaryRank"]
     officers = ranks[ranks.index(data.OFFICER_RANKS_FROM) :]
     ref.MilitaryRank.objects.filter(name__in=officers).update(is_officer=True)
+    ref.MilitarySpeciality.objects.filter(name__in=data.RESERVATION_LIST_VUS).update(
+        in_reservation_list=True
+    )
+    ref.RegistrationDocument.objects.filter(
+        name=data.RESERVATION_APPENDIX_DOCUMENT
+    ).update(in_reservation_appendix=True)
     for order, name in enumerate(data.CITIES, 1):
         ref.City.objects.get_or_create(
             name=name, defaults={"code": f"6600000{order:04d}", "sort_order": order}
@@ -314,7 +320,15 @@ class PeopleGenerator:
             ]
             composition = self.rnd.choices(list(RANK_COMPOSITION), weights=weights)[0]
             record.duty = self.get("MilitaryDuty", "Военнообязанный")
-            record.document_type = self.get("RegistrationDocument", "Военный билет")
+            # Часть людей вместо военного билета имеет временное удостоверение
+            record.document_type = self.get(
+                "RegistrationDocument",
+                (
+                    data.RESERVATION_APPENDIX_DOCUMENT
+                    if self.chance(5)
+                    else "Военный билет"
+                ),
+            )
             record.document_series = self.rnd.choice(["АВ", "АЕ", "АК", "АС"])
             record.document_number = self.digits(7)
             record.document_date = self.date_between(

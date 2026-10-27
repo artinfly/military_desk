@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="report-list">
+    {% for report in reports %}
+    <form class="panel report" method="get" action="{% url 'reports:download' report.slug %}">
+        <div class="report-text">
+            <h2 class="panel-title">{{ report.title }}</h2>
+            <p class="muted">{{ report.description }}</p>
+        </div>
+        <div class="report-actions">
+            {% if report.period %}
+            <span class="muted">{{ report.period }}:</span>
+            <label>с {{ period_form.date_from }}</label>
+            <label>по {{ period_form.date_to }}</label>
+            {% endif %}
+            <button class="btn btn-primary" type="submit">Скачать Excel</button>
+        </div>
+    </form>
+    {% endfor %}
+    <p class="muted">«Отчёт по фильтру» — кнопка «Выгрузить в Excel» в списке учётных карточек.</p>
+</div>
+{% endblock %}

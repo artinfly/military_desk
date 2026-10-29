@@ -6,9 +6,7 @@ from .navigation import MENU
 
 
 def is_allowed(user, item):
-    """Пункт меню доступен пользователю (персонал, право, любое право приложения)."""
-    if item.get("staff_only") and not user.is_staff:
-        return False
+    """Пункт меню доступен пользователю (право или любое право приложения)."""
     if item.get("perm") and not user.has_perm(item["perm"]):
         return False
     return not item.get("module") or user.has_module_perms(item["module"])

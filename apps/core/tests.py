@@ -26,13 +26,20 @@ class MenuTests(TestCase):
         ]
         self.assertEqual(active, ["Главная"])
 
-    def test_admin_item_only_for_staff(self):
-        self.client.force_login(User.objects.create_user("operator"))
-        self.assertNotIn(
-            "Админка", self.menu_labels(self.client.get(reverse("core:home")))
+    def test_sidebar_footer(self):
+        """Внизу панели: имя и логин, выход; администрирование — персоналу."""
+        admin_link = f'href="{reverse("admin:index")}"'
+        self.client.force_login(
+            User.objects.create_user("petrov", last_name="Петров", first_name="Иван")
         )
+        response = self.client.get(reverse("core:home"))
+        self.assertContains(response, "Петров И.")
+        self.assertContains(response, "petrov")
+        self.assertContains(response, reverse("accounts:logout"))
+        self.assertNotContains(response, admin_link)
+        self.assertNotIn("Админка", self.menu_labels(response))
 
         self.client.force_login(User.objects.create_user("admin", is_staff=True))
-        self.assertIn(
-            "Админка", self.menu_labels(self.client.get(reverse("core:home")))
-        )
+        response = self.client.get(reverse("core:home"))
+        self.assertContains(response, admin_link)
+        self.assertNotIn("Админка", self.menu_labels(response))

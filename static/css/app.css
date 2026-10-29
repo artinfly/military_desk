@@ -73,7 +73,11 @@ a { color: var(--accent-dark); }
     flex-shrink: 0;
     background: var(--sidebar);
     color: var(--sidebar-text);
+    /* Панель во всю высоту окна и не уезжает при прокрутке; низ панели — всегда внизу */
+    position: sticky; top: 0; align-self: flex-start;
+    height: 100vh; display: flex; flex-direction: column;
 }
+.sidebar nav { flex: 1; overflow-y: auto; padding-bottom: 10px; }
 
 .brand {
     display: flex; align-items: center; gap: 10px; text-decoration: none;
@@ -99,6 +103,43 @@ a { color: var(--accent-dark); }
 .nav-link:hover { background: var(--sidebar-hover); color: #fff; }
 .nav-link.active { background: var(--sidebar-hover); color: var(--accent); border-left-color: var(--accent); }
 
+/* --- Низ боковой панели: пользователь, администрирование, выход --- */
+
+.sidebar-footer {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 12px; border-top: 1px solid #333;
+}
+.sidebar-user { display: flex; align-items: center; gap: 10px; padding: 2px 2px 6px; }
+.sidebar-user-avatar {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 34px; height: 34px; border-radius: 50%; background: #333; color: #bdbdbd;
+}
+.sidebar-user-info { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.25; }
+.sidebar-user-name {
+    color: #fff; font-weight: 600; font-size: 14px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sidebar-user-login { color: #8a8a8a; font-size: 12px; font-variant-numeric: tabular-nums; }
+.sidebar-admin {
+    display: flex; align-items: center; gap: 10px; padding: 7px 8px;
+    border-radius: var(--radius); color: var(--sidebar-text); text-decoration: none; font-size: 14px;
+    transition: background .12s, color .12s;
+}
+.sidebar-admin:hover { background: var(--sidebar-hover); color: #fff; }
+.sidebar-logout { margin: 0; }
+.sidebar-logout-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    padding: 8px; border: 1px solid rgba(192, 57, 43, .45); border-radius: var(--radius);
+    background: rgba(192, 57, 43, .14); color: #f0a59c;
+    font: inherit; font-size: 14px; cursor: pointer; transition: background .12s, color .12s;
+}
+.sidebar-logout-btn:hover { background: rgba(192, 57, 43, .28); color: #fff; }
+.sidebar-footer svg {
+    width: 17px; height: 17px; flex-shrink: 0;
+    fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.sidebar-user-avatar svg { width: 18px; height: 18px; }
+
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
 .topbar {
@@ -106,9 +147,6 @@ a { color: var(--accent-dark); }
     margin: 0 28px; padding: 22px 0 12px; border-bottom: 2px solid var(--accent-soft);
 }
 .page-title { margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -.01em; }
-.user { display: flex; align-items: center; gap: 12px; }
-.user-name { color: var(--muted); }
-.user form { margin: 0; }
 
 .content { padding: 20px 28px 28px; }
 

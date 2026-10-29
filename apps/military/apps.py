@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 
 class MilitaryConfig(AppConfig):
-    """Воинский учёт: документ, ВУС, звание, военкомат, бронирование, служба, сборы…"""
+    """Воинский учёт: документ, ВУС, звание, военкомат, бронирование, приписка…"""
 
     name = "apps.military"
     label = "military"

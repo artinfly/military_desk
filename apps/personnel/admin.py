@@ -38,18 +38,6 @@ class AssignmentInline(SectionInline):
     model = models.Assignment
 
 
-class LanguageInline(SectionInline):
-    model = models.LanguageSkill
-
-
-class ProfessionInline(SectionInline):
-    model = models.PersonProfession
-
-
-class PassInline(SectionInline):
-    model = models.Pass
-
-
 class AttributeInline(SectionInline):
     model = models.AdditionalAttribute
 
@@ -85,7 +73,7 @@ class PersonAdmin(admin.ModelAdmin):
             "Личные данные",
             {
                 "fields": (
-                    ("citizenship", "nationality", "family_status"),
+                    ("citizenship", "nationality"),
                     ("inn", "snils", "card_number"),
                     ("phone", "email"),
                 )
@@ -110,9 +98,6 @@ class PersonAdmin(admin.ModelAdmin):
         RelativeInline,
         EducationInline,
         AssignmentInline,
-        LanguageInline,
-        ProfessionInline,
-        PassInline,
         AttributeInline,
     ]
 

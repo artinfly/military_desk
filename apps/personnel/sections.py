@@ -116,30 +116,12 @@ for _section in [
         (
             "department",
             "position",
-            "status",
             "order_number",
             "order_date",
             "date_from",
             "date_to",
         ),
         order=50,
-    ),
-    Section(
-        "languages", "Языки", models.LanguageSkill, ("language", "level"), order=60
-    ),
-    Section(
-        "professions",
-        "Профессии",
-        models.PersonProfession,
-        ("profession", "worker_category", "speciality", "date_from", "is_main"),
-        order=70,
-    ),
-    Section(
-        "passes",
-        "Пропуска",
-        models.Pass,
-        ("number", "office", "date_from", "date_to"),
-        order=80,
     ),
     Section(
         "attributes",

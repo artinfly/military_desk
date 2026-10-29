@@ -14,7 +14,7 @@ from apps.references import models as ref
 
 from .references import References
 from .report import Report
-from .source import end_date, is_deleted, number, text
+from .source import end_date, is_deleted, text
 
 # Пол в старой базе — буква; латинские M/F встречаются в выгрузках
 GENDERS = {"М": "М", "M": "М", "Ж": "Ж", "F": "Ж"}
@@ -93,9 +93,6 @@ class LegacyImporter:
                 gender=gender or "М",
                 birth_date=row["birth_date"],
                 birth_place=text(row["birth_place"], 500),
-                family_status=self.ref(
-                    "nsi_family_statuses", row["family_status_id"], where
-                ),
                 citizenship=text(data.get("sitizenship"), 100),
                 inn=text(data.get("inn"), 12),
                 snils=text(data.get("snils"), 14),
@@ -219,7 +216,6 @@ class LegacyImporter:
                     document_series=text(row.get("mil_doc_series"), 20),
                     document_number=text(row.get("mil_doc_number"), 30),
                     document_date=row.get("issue_date"),
-                    issued_by=get("nsi_places_of_issue", "place_id"),
                     speciality=get("nsi_vuses", "vus_id"),
                     accounting_group=get(
                         "nsi_accounting_groups", "accounting_group_id"
@@ -294,114 +290,6 @@ class LegacyImporter:
             ),
         )
         self.section(
-            "Звания",
-            "ranks",
-            lambda p, row, w: (
-                mil.RankAssignment(
-                    person=p,
-                    rank=rank,
-                    order=text(row["order"], 150),
-                    date_from=row["from_the_date"],
-                    date_to=end_date(row["by_date"]),
-                )
-                if (rank := r("nsi_military_ranks", row["mil_rank_id"], w))
-                else None
-            ),
-        )
-        self.section(
-            "Военная служба",
-            "mil_service",
-            lambda p, row, w: (
-                mil.MilitaryService(
-                    person=p,
-                    unit=text(row["mil_unit_name"], 255),
-                    speciality=r("nsi_vuses", row["vus_id"], w),
-                    order_in=text(row["order_of_admission"], 150),
-                    order_out=text(row["order_of_removal"], 150),
-                    date_from=row["from_the_date"],
-                    date_to=end_date(row["by_date"]),
-                )
-            ),
-        )
-        self.section(
-            "Сборы",
-            "mil_trainings",
-            lambda p, row, w: (
-                mil.Training(
-                    person=p,
-                    year=number(row["training_year"]),
-                    days=number(row["days_num"]),
-                    organization=text(row["organization"], 255),
-                    speciality=r("nsi_vuses", row["vus_id"], w),
-                )
-            ),
-        )
-        self.section(
-            "Присяга",
-            "oaths",
-            lambda p, row, w: (
-                mil.Oath(
-                    person=p,
-                    date=row["oath_date"],
-                    place=text(row["oath_place"], 255),
-                    height=row["height"],
-                    head_size=row["head_size"],
-                    mask_size=row["mask_size"],
-                    clothing_size=row["clothing_size"],
-                    shoe_size=row["shoe_size"],
-                )
-            ),
-        )
-        self.section(
-            "Снятие с учёта",
-            "removal_regs",
-            lambda p, row, w: (
-                mil.Removal(
-                    person=p,
-                    date=row["removal_date"],
-                    reason=reason,
-                    note=text(row["note"], 500),
-                )
-                if row["removal_date"]
-                and (reason := r("nsi_removal_reasons", row["reason_id"], w))
-                else None
-            ),
-        )
-        self.section(
-            "Награды",
-            "rewards",
-            lambda p, row, w: (
-                mil.PersonAward(
-                    person=p,
-                    award=award,
-                    date=row["date"],
-                    category=text(row["reward_category"], 100),
-                    document_type=text(row["doc_type"], 100),
-                    document_series=text(row["doc_series"], 20),
-                    document_number=text(row["doc_number"], 30),
-                    issued_by=text(row["issued_by"], 255),
-                    note=text(row["note"], 500),
-                )
-                if (award := r("nsi_rewards", row["nsi_reward_id"], w))
-                else None
-            ),
-        )
-        self.section(
-            "Спецучёт",
-            "special_accounts",
-            lambda p, row, w: (
-                mil.SpecialAccount(
-                    person=p,
-                    series=text(row["special_acc_series"], 20),
-                    number=text(row["special_acc_num"], 30),
-                    activity=r("nsi_activities", row["activity_id"], w),
-                    paragraph=text(row["parag_special"], 50),
-                    registered_on=row["date_of_reg"],
-                    withdrawn_on=row["date_of_withdr"],
-                )
-            ),
-        )
-        self.section(
             "Образование",
             "education",
             lambda p, row, w: (
@@ -436,7 +324,6 @@ class LegacyImporter:
                     position=text(row["job_title"], 255),
                     grade=text(row["rank"], 20),
                     employee_category=text(row["employee_cat"], 255),
-                    status=r("nsi_work_statuses", row["employee_status"], w),
                     order_kind=text(row["kind_order"], 255),
                     order_number=text(row["order_num"], 50),
                     order_date=row["order_date"],
@@ -460,54 +347,6 @@ class LegacyImporter:
                     is_dependent=bool(row["is_dependent"]),
                 )
                 if (relation := r("nsi_relation_types", row["relation_degree"], w))
-                else None
-            ),
-        )
-        self.section(
-            "Языки",
-            "languages",
-            lambda p, row, w: (
-                pers.LanguageSkill(
-                    person=p,
-                    language=language,
-                    level=text(row["language_skill"], 100),
-                )
-                if (language := r("nsi_language_types", row["language_type_id"], w))
-                else None
-            ),
-        )
-        self.section(
-            "Профессии",
-            "professions",
-            lambda p, row, w: (
-                pers.PersonProfession(
-                    person=p,
-                    profession=profession,
-                    worker_category=r(
-                        "nsi_workers_category", row["category_worker"], w
-                    ),
-                    speciality=text(row["speciality"], 255),
-                    training_direction=text(row["training_direction"], 255),
-                    date_from=row["from_date"],
-                    is_main=bool(row["main"]),
-                    note=text(row["note"], 500),
-                )
-                if (profession := r("nsi_professions", row["profession"], w))
-                else None
-            ),
-        )
-        self.section(
-            "Пропуска",
-            "passes",
-            lambda p, row, w: (
-                pers.Pass(
-                    person=p,
-                    number=text(row["pass_number"], 30),
-                    office=text(row["office_num"], 50),
-                    date_from=row["pass_from_date"],
-                    date_to=end_date(row["pass_by_date"]),
-                )
-                if text(row["pass_number"])
                 else None
             ),
         )

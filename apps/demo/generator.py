@@ -134,7 +134,6 @@ class PeopleGenerator:
             birth_date=birth,
             birth_place=self.rnd.choice(data.CITIES),
             citizenship="Российская Федерация",
-            family_status=self.pick("FamilyStatus"),
             inn=self.digits(12),
             snils=f"{self.digits(3)}-{self.digits(3)}-{self.digits(3)} {self.digits(2)}",
             phone=f"+7 9{self.digits(2)} {self.digits(3)}-{self.digits(2)}-{self.digits(2)}",
@@ -199,13 +198,11 @@ class PeopleGenerator:
                 is_main=True,
             )
         )
-        working = self.get("WorkStatus", "Работает")
         self.add(
             per.Assignment(
                 person=person,
                 department=person.department,
                 position=person.position,
-                status=working,
                 order_kind="Приём на работу",
                 order_number=f"{self.rnd.randint(1, 900)}-к",
                 order_date=person.employment_date,
@@ -219,7 +216,6 @@ class PeopleGenerator:
                     person=person,
                     department=person.department,
                     position=person.position,
-                    status=self.get("WorkStatus", "Уволен"),
                     order_kind="Увольнение",
                     order_number=f"{self.rnd.randint(1, 900)}-у",
                     order_date=person.dismissal_date,
@@ -298,11 +294,6 @@ class PeopleGenerator:
             fitness_category=self.rnd.choices(
                 self.refs["FitnessCategory"], weights=[60, 25, 12, 2, 1]
             )[0],
-            issued_by=(
-                self.get("IssuingAuthority", commissariat.name)
-                if commissariat.name in self.by_name["IssuingAuthority"]
-                else self.pick("IssuingAuthority")
-            ),
         )
         if conscript:
             record.duty = self.get("MilitaryDuty", "Призывник")
@@ -363,7 +354,6 @@ class PeopleGenerator:
             elif self.chance(30):
                 record.mobilization_order = self.digits(6)
                 record.mobilization_letter = self.rnd.choice(["А", "Б", "В"])
-            self.add_military_history(person, record, age)
         self.add(record)
         self.add(
             mil.CommissariatRegistration(
@@ -372,61 +362,6 @@ class PeopleGenerator:
                 date_from=record.document_date,
             )
         )
-
-    def add_military_history(self, person, record, age):
-        served_from = person.birth_date + timedelta(days=self.rnd.randint(18, 20) * 366)
-        if self.chance(60):
-            self.add(
-                mil.MilitaryService(
-                    person=person,
-                    unit=f"Войсковая часть {self.digits(5)}",
-                    speciality=record.speciality,
-                    date_from=served_from,
-                    date_to=served_from + timedelta(days=365),
-                )
-            )
-            self.add(
-                mil.Oath(
-                    person=person,
-                    date=served_from + timedelta(days=30),
-                    place="Войсковая часть",
-                )
-            )
-        if record.rank and record.rank.sort_order > 4:
-            self.add(
-                mil.RankAssignment(
-                    person=person,
-                    rank=record.rank,
-                    date_from=self.date_between(served_from, self.today),
-                    order=f"Приказ № {self.rnd.randint(1, 500)}",
-                )
-            )
-        if self.chance(8):
-            self.add(
-                mil.Training(
-                    person=person,
-                    year=self.rnd.randint(2010, self.today.year),
-                    days=self.rnd.choice([10, 20, 30]),
-                    organization="Учебный центр",
-                    speciality=record.speciality,
-                )
-            )
-        if person.is_svo or self.chance(1):
-            self.add(
-                mil.PersonAward(
-                    person=person,
-                    award=self.pick("Award"),
-                    date=self.date_between(date(2022, 6, 1), self.today),
-                )
-            )
-        if age >= 55 and self.chance(30):
-            self.add(
-                mil.Removal(
-                    person=person,
-                    date=self.date_between(self.years_ago(age - 55), self.today),
-                    reason=self.get("RemovalReason", "По возрасту"),
-                )
-            )
 
     # --- Запуск ---
 

@@ -28,7 +28,7 @@ class RoleGroupsTests(TestCase):
         viewer, operator, admin = perms(VIEWER), perms(OPERATOR), perms(ADMIN)
         self.assertTrue(all(p.split(".")[1].startswith("view_") for p in viewer))
         self.assertIn("personnel.view_person", viewer)
-        self.assertIn("military.delete_rankassignment", operator)
+        self.assertIn("military.delete_commissariatregistration", operator)
         self.assertNotIn("personnel.delete_person", operator)
         self.assertNotIn("references.change_militaryrank", operator)
         self.assertIn("personnel.delete_person", admin)

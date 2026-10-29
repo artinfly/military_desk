@@ -32,13 +32,6 @@ class Person(TimeStampedModel):
 
     citizenship = models.CharField("Гражданство", max_length=100, blank=True)
     nationality = models.CharField("Национальность", max_length=100, blank=True)
-    family_status = models.ForeignKey(
-        ref.FamilyStatus,
-        verbose_name="Семейное положение",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-    )
     inn = models.CharField("ИНН", max_length=12, blank=True)
     snils = models.CharField("СНИЛС", max_length=14, blank=True)
     phone = models.CharField("Телефон", max_length=50, blank=True)
@@ -258,13 +251,6 @@ class Assignment(PersonSection, PeriodModel):
     employee_category = models.CharField(
         "Категория работника", max_length=100, blank=True
     )
-    status = models.ForeignKey(
-        ref.WorkStatus,
-        verbose_name="Статус",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-    )
     order_kind = models.CharField("Вид приказа", max_length=255, blank=True)
     order_number = models.CharField("Номер приказа", max_length=50, blank=True)
     order_date = models.DateField("Дата приказа", null=True, blank=True)
@@ -277,65 +263,6 @@ class Assignment(PersonSection, PeriodModel):
 
     def __str__(self):
         return f"{self.department or ''} {self.position}".strip()
-
-
-class LanguageSkill(PersonSection):
-    language = models.ForeignKey(
-        ref.Language, verbose_name="Язык", on_delete=models.PROTECT
-    )
-    level = models.CharField("Степень владения", max_length=100, blank=True)
-
-    class Meta:
-        verbose_name = "иностранный язык"
-        verbose_name_plural = "иностранные языки"
-        default_related_name = "languages"
-
-    def __str__(self):
-        return f"{self.language} ({self.level})" if self.level else str(self.language)
-
-
-class PersonProfession(PersonSection):
-    profession = models.ForeignKey(
-        ref.Profession, verbose_name="Профессия", on_delete=models.PROTECT
-    )
-    worker_category = models.ForeignKey(
-        ref.WorkerCategory,
-        verbose_name="Категория работников",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-    )
-    speciality = models.CharField("Специальность", max_length=255, blank=True)
-    training_direction = models.CharField(
-        "Направление подготовки", max_length=255, blank=True
-    )
-    date_from = models.DateField("С какого времени", null=True, blank=True)
-    is_main = models.BooleanField("Основная", default=False)
-    note = models.CharField("Примечание", max_length=500, blank=True)
-
-    class Meta:
-        verbose_name = "профессия"
-        verbose_name_plural = "профессии"
-        default_related_name = "professions"
-
-    def __str__(self):
-        return str(self.profession)
-
-
-class Pass(PersonSection, PeriodModel):
-    """Пропуск на предприятие."""
-
-    number = models.CharField("Номер пропуска", max_length=30)
-    office = models.CharField("Бюро пропусков", max_length=50, blank=True)
-
-    class Meta:
-        verbose_name = "пропуск"
-        verbose_name_plural = "пропуска"
-        ordering = ["-date_from"]
-        default_related_name = "passes"
-
-    def __str__(self):
-        return self.number
 
 
 class AdditionalAttribute(PersonSection, PeriodModel):

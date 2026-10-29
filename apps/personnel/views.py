@@ -1,7 +1,7 @@
 """Страницы учётных карточек: список, карточка с вкладками, правка карточки и разделов.
 
 Смотреть может каждый вошедший; добавлять, менять и удалять — у кого есть права
-Django на соответствующую модель (personnel.change_person, military.add_rankassignment…).
+Django на соответствующую модель (personnel.change_person, military.add_commissariatregistration…).
 """
 
 from django.contrib import messages
@@ -120,9 +120,7 @@ class PersonDetailView(ViewPersonRequired, DetailView):
     """Карточка с вкладками; открытая вкладка — в адресе (?tab=…)."""
 
     template_name = "personnel/person_detail.html"
-    queryset = Person.objects.select_related(
-        "department", "family_status", "updated_by"
-    )
+    queryset = Person.objects.select_related("department", "updated_by")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

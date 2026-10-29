@@ -34,38 +34,25 @@ class RefTable:
 
 REF_TABLES = [
     RefTable("nsi_accounting_groups", "accounting_group_id", "accounting_group", ref.AccountingGroup),
-    RefTable("nsi_activities", "activity_id", "activity", ref.Activity),
     RefTable("nsi_addresses_types", "id_type", "type_name", ref.AddressType),
-    RefTable("nsi_army_positions", "position_id", "army_position", ref.ArmyPosition),
     RefTable("nsi_cats_for_mil_service", "suit_category_id", "suitability_category", ref.FitnessCategory),
     RefTable("nsi_cities", "city_id", "city", ref.City, by_code_only=True),
     RefTable("nsi_departments", "id_department", "name_department", ref.Department,
              by_code_only=True, extra={"dep_number": "number"}),
-    RefTable("nsi_family_statuses", "family_status_id", "family_status", ref.FamilyStatus),
-    RefTable("nsi_filials", "id_filial", "filial_name", ref.Branch, extra={"filial_address": "address"}),
     RefTable("nsi_hot_spots", "id_hot_spot", "hot_spot_name", ref.AttributeType),
     RefTable("nsi_hot_spots_values", "value_id", "value", ref.AttributeValue),
-    RefTable("nsi_language_types", "lang_type_id", "lang_type", ref.Language),
     RefTable("nsi_mil_registration_docs", "mil_reg_doc_id", "mil_reg_document", ref.RegistrationDocument),
     RefTable("nsi_military_commissariarts", "military_commissariart_id", "military_commissariart",
              ref.MilitaryCommissariat),
     RefTable("nsi_military_duties", "mil_duty_id", "military_duty", ref.MilitaryDuty),
     RefTable("nsi_military_ranks", "mil_rank_id", "military_rank", ref.MilitaryRank),
-    RefTable("nsi_places_of_issue", "place_id", "place", ref.IssuingAuthority),
-    RefTable("nsi_professions", "id_profession", "name_profession", ref.Profession, extra={"okpd": "okpdtr"}),
     RefTable("nsi_regions", "region_id", "region", ref.Region),
     RefTable("nsi_relation_types", "type_id", "type_name", ref.RelationType),
-    RefTable("nsi_removal_reasons", "removal_reason_id", "removal_reason", ref.RemovalReason),
     RefTable("nsi_reserve_categories", "reserve_category_id", "reserve_category", ref.ReserveCategory),
     RefTable("nsi_reserves_composition", "reserve_comp_id", "reserve_composition", ref.ReserveComposition),
-    RefTable("nsi_rewards", "reward_id", "reward", ref.Award),
     RefTable("nsi_specials", "special_id", "special", ref.SpecialAccountType),
     RefTable("nsi_streets", "street_id", "street", ref.Street, by_code_only=True),
-    RefTable("nsi_types_production", "id_type_prod", "name_type_prod", ref.ProductionType,
-             extra={"dept_level": "level"}),
     RefTable("nsi_vuses", "vus_id", "vus", ref.MilitarySpeciality),
-    RefTable("nsi_work_statuses", "id_status", "status_name", ref.WorkStatus),
-    RefTable("nsi_workers_category", "worker_category_id", "worker_category", ref.WorkerCategory),
 ]  # fmt: skip
 
 
@@ -129,6 +116,8 @@ class References:
         if old_id is None or old_id == "":
             return None
         obj = self.maps[table].get(old_id)
+        if obj is None and str(old_id) == "0":
+            return None  # 0 в старой базе — «не заполнено» (значение по умолчанию)
         if obj is None:
             self.report.problem(f"{where}: нет записи {old_id} в {table}")
         return obj

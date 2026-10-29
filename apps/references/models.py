@@ -130,12 +130,6 @@ class SpecialAccountType(Reference):
         verbose_name_plural = "виды специального учёта"
 
 
-class ArmyPosition(Reference):
-    class Meta(Reference.Meta):
-        verbose_name = "должность в армии"
-        verbose_name_plural = "должности в армии"
-
-
 class RegistrationDocument(Reference):
     in_reservation_appendix = models.BooleanField(
         "Отдельно в приложении 2",
@@ -147,24 +141,6 @@ class RegistrationDocument(Reference):
     class Meta(Reference.Meta):
         verbose_name = "документ воинского учёта"
         verbose_name_plural = "документы воинского учёта"
-
-
-class IssuingAuthority(Reference):
-    class Meta(Reference.Meta):
-        verbose_name = "кем выдан"
-        verbose_name_plural = "кем выданы документы"
-
-
-class RemovalReason(Reference):
-    class Meta(Reference.Meta):
-        verbose_name = "причина снятия с учёта"
-        verbose_name_plural = "причины снятия с учёта"
-
-
-class Award(Reference):
-    class Meta(Reference.Meta):
-        verbose_name = "награда"
-        verbose_name_plural = "награды"
 
 
 # --- Работа на предприятии ---
@@ -190,48 +166,6 @@ class Department(Reference):
 
     def __str__(self):
         return f"{self.number} {self.name}".strip()
-
-
-class ProductionType(Reference):
-    level = models.CharField("Уровень", max_length=50, blank=True)
-
-    class Meta(Reference.Meta):
-        verbose_name = "производство"
-        verbose_name_plural = "производства"
-
-
-class Branch(Reference):
-    address = models.CharField("Адрес", max_length=500, blank=True)
-
-    class Meta(Reference.Meta):
-        verbose_name = "филиал"
-        verbose_name_plural = "филиалы"
-
-
-class WorkerCategory(Reference):
-    class Meta(Reference.Meta):
-        verbose_name = "категория работников"
-        verbose_name_plural = "категории работников"
-
-
-class Profession(Reference):
-    okpdtr = models.CharField("Код ОКПДТР", max_length=20, blank=True)
-
-    class Meta(Reference.Meta):
-        verbose_name = "профессия"
-        verbose_name_plural = "профессии"
-
-
-class WorkStatus(Reference):
-    class Meta(Reference.Meta):
-        verbose_name = "статус работника"
-        verbose_name_plural = "статусы работника"
-
-
-class Activity(Reference):
-    class Meta(Reference.Meta):
-        verbose_name = "вид деятельности"
-        verbose_name_plural = "виды деятельности"
 
 
 # --- Адреса ---
@@ -289,19 +223,7 @@ class AttributeValue(Reference):
 # --- Прочее ---
 
 
-class FamilyStatus(Reference):
-    class Meta(Reference.Meta):
-        verbose_name = "семейное положение"
-        verbose_name_plural = "семейное положение"
-
-
 class RelationType(Reference):
     class Meta(Reference.Meta):
         verbose_name = "степень родства"
         verbose_name_plural = "степени родства"
-
-
-class Language(Reference):
-    class Meta(Reference.Meta):
-        verbose_name = "язык"
-        verbose_name_plural = "языки"

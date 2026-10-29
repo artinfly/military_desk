@@ -20,7 +20,7 @@ class MilitaryRecordInline(admin.StackedInline):
             {
                 "fields": (
                     ("document_type", "document_series", "document_number"),
-                    ("document_date", "issued_by"),
+                    "document_date",
                 )
             },
         ),
@@ -61,13 +61,6 @@ MILITARY_INLINES = [
         _inline(m)
         for m in (
             models.CommissariatRegistration,
-            models.RankAssignment,
-            models.MilitaryService,
-            models.Training,
-            models.Oath,
-            models.Removal,
-            models.PersonAward,
-            models.SpecialAccount,
             models.ReservationDismissal,
         )
     ),

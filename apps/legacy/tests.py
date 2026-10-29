@@ -3,14 +3,16 @@ from io import StringIO
 from unittest import mock
 
 from django.core.management import CommandError, call_command
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
+from psycopg.postgres import types
+from psycopg.types.datetime import DateLoader, TimestampLoader
 
 from apps.military.models import CommissariatRegistration, MilitaryRecord
 from apps.personnel.models import Address, Person
 from apps.references import models as ref
 
 from .importer import LegacyImporter
-from .source import NO_END
+from .source import NO_END, _empty_if_invalid
 
 # Колонки разделов, которые не важны для тестов, — пустые
 SECTION_BLANKS = {
@@ -144,6 +146,28 @@ class ReferencesTests(TestCase):
         # Повторный перенос не дублирует справочники
         LegacyImporter(tables()).run()
         self.assertEqual(ref.MilitarySpeciality.objects.count(), 2)
+
+    def test_zero_means_empty(self):
+        importer = LegacyImporter(tables())
+        importer.run()
+        # 0 — значение по умолчанию в старой базе: пусто, без проблемы
+        self.assertIsNone(importer.ref("nsi_vuses", 0, "карточка 1"))
+        self.assertEqual(importer.report.problems, [])
+        # Неизвестный номер — проблема
+        self.assertIsNone(importer.ref("nsi_vuses", 999, "карточка 1"))
+        self.assertEqual(
+            importer.report.problems, ["карточка 1: нет записи 999 в nsi_vuses"]
+        )
+
+
+class SourceTests(SimpleTestCase):
+    def test_dates_before_christ_read_as_empty(self):
+        date_loader = _empty_if_invalid(DateLoader)(types["date"].oid)
+        self.assertIsNone(date_loader.load(b"0001-01-01 BC"))
+        self.assertEqual(date_loader.load(b"2020-05-06"), date(2020, 5, 6))
+        stamp_loader = _empty_if_invalid(TimestampLoader)(types["timestamp"].oid)
+        self.assertIsNone(stamp_loader.load(b"0001-01-01 00:00:00 BC"))
+        self.assertEqual(stamp_loader.load(b"2020-05-06 10:00:00").year, 2020)
 
 
 class PeopleTests(TestCase):

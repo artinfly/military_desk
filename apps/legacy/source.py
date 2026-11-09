@@ -58,10 +58,18 @@ def read(host, port, dbname, user, password):
         connection.adapters.register_loader(
             "timestamp", _empty_if_invalid(TimestampLoader)
         )
-        return {
+        tables = {
             table: connection.execute(f"SELECT * FROM public.{table}").fetchall()
             for table in TABLES
         }
+        for table in ("spr", "emps_spr"):
+            if connection.execute(
+                "SELECT to_regclass(%s)", (f"public.{table}",)
+            ).fetchone()["to_regclass"]:
+                tables[table] = connection.execute(
+                    f"SELECT * FROM public.{table}"
+                ).fetchall()
+        return tables
 
 
 def is_deleted(row):

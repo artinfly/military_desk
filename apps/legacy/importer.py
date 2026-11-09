@@ -12,9 +12,52 @@ from apps.military import models as mil
 from apps.personnel import models as pers
 from apps.references import models as ref
 
+from .models import SourceRow
 from .references import References
 from .report import Report
 from .source import end_date, is_deleted, text
+
+SOURCE_KEYS = {
+    "education": "education_id",
+    "addresses": "address_id",
+    "assigments": "assigment_id",
+    "relatives": "relative_id",
+    "additional_attributes": "attribute_id",
+}
+
+
+def source_key(table, row):
+    if table in SOURCE_KEYS:
+        return str(row.get(SOURCE_KEYS[table]) or "")
+    if table == "com_history":
+        return "/".join(
+            str(row.get(c) or "")
+            for c in ("account_card_id", "comm", "from_date", "by_date")
+        )
+    return "/".join(str(row.get(c) or "") for c in ("account_card_id", "spec_order"))
+
+
+def remember_sources(objects):
+    links = []
+    for obj in objects:
+        source = getattr(obj, "_legacy_source", None)
+        if source and source[1]:
+            links.append(
+                SourceRow(
+                    table=source[0],
+                    key=source[1],
+                    model=obj._meta.label_lower,
+                    target_id=obj.pk,
+                    person_id=obj.pk if isinstance(obj, pers.Person) else obj.person_id,
+                )
+            )
+    SourceRow.objects.bulk_create(
+        links,
+        update_conflicts=True,
+        update_fields=("model", "target_id", "person_id"),
+        unique_fields=("table", "key"),
+    )
+
 
 # Пол в старой базе — буква; латинские M/F встречаются в выгрузках
 GENDERS = {"М": "М", "M": "М", "Ж": "Ж", "F": "Ж"}
@@ -50,7 +93,70 @@ class LegacyImporter:
         self.import_people()
         self.import_military()
         self.import_sections()
+        self.import_first_department()
         return self.report
+
+    def import_first_department(self):
+        import re
+
+        from .models import PersonnelCode, ProfessionCode
+
+        mapping = {}
+        conflicts = 0
+        for row in _rows(self.tables, "spr"):
+            code = text(row.get("da1"))
+            ns = text(row.get("ns"))
+            if not re.fullmatch(r"[0-9]{1,7}", code):
+                self.report.problem(
+                    "Справочник первого отдела: пропущен некорректный код ОКПДТР"
+                )
+                continue
+            number = int(ns) if ns.isdigit() and 1 <= int(ns) <= 99 else None
+            if code in mapping and mapping[code] != number:
+                conflicts += 1
+            mapping[code] = number
+        ProfessionCode.objects.bulk_create(
+            [ProfessionCode(code=code, row_number=ns) for code, ns in mapping.items()],
+            update_conflicts=True,
+            update_fields=("row_number",),
+            unique_fields=("code",),
+        )
+        self.report.count("Коды первого отдела", len(mapping))
+        if conflicts:
+            self.report.problem(
+                f"Коды первого отдела: разных строк NS для одного кода — {conflicts}; использовано последнее значение."
+            )
+        rows = _rows(self.tables, "emps_spr")
+        records = {}
+        professions = {p.code: p for p in ProfessionCode.objects.all()} if rows else {}
+        for row in rows:
+            person = self.people.get(row.get("account_card_id"))
+            code = text(row.get("code"))
+            if person is None:
+                continue
+            if code and not re.fullmatch(r"[0-9]{1,7}", code):
+                self.report.problem(
+                    "Кадровые коды первого отдела: пропущен некорректный ОКПДТР"
+                )
+                continue
+            if code and code not in professions:
+                ns = text(row.get("ns"))
+                number = int(ns) if ns.isdigit() and 1 <= int(ns) <= 99 else None
+                professions[code] = ProfessionCode.objects.create(
+                    code=code, row_number=number
+                )
+            records[person.pk] = PersonnelCode(
+                person=person,
+                profession=professions.get(code),
+                category=text(row.get("cat"), 100),
+            )
+        PersonnelCode.objects.bulk_create(
+            list(records.values()),
+            update_conflicts=True,
+            update_fields=("profession", "category"),
+            unique_fields=("person",),
+        )
+        self.report.count("Кадровые коды первого отдела", len(records))
 
     def ref(self, table, old_id, where):
         return self.refs.get(table, old_id, where)
@@ -59,6 +165,7 @@ class LegacyImporter:
         """Сохраняет записи раздела одной командой и записывает количество в итог."""
         if objects:
             objects[0].__class__.objects.bulk_create(objects, batch_size=1000)
+            remember_sources(objects)
         self.report.count(what, len(objects))
 
     # --- Карточки ---
@@ -110,6 +217,7 @@ class LegacyImporter:
                 is_svo=bool(row["is_svo"]),
             )
             self.people[row["account_id"]] = person
+            person._legacy_source = ("account_cards", str(row["account_id"]))
             cards.append(person)
         self.bulk("Учётные карточки", cards)
         self.import_documents(personal)
@@ -167,6 +275,10 @@ class LegacyImporter:
                         valid_until=row["valid_until"],
                         note=text(row["note"], 500),
                     )
+                )
+                documents[-1]._legacy_source = (
+                    "personal_properties",
+                    str(row.get("personal_property_id") or row["personal_id"]),
                 )
             if text(row["int_passport_number"]):
                 foreign = (
@@ -259,6 +371,7 @@ class LegacyImporter:
                 continue
             obj = build(person, row, f"{table}, карточка {person.tab_number}")
             if obj is not None:
+                obj._legacy_source = (table, source_key(table, row))
                 objects.append(obj)
         self.bulk(what, objects)
 

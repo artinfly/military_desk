@@ -11,7 +11,7 @@ from django.http import Http404
 
 from .services import counts, lists
 
-# Отчёты по воинскому учёту видят все, кому доступен воинский учёт
+# Для отчёта нужны права на карточку, воинский учёт и включённые в него разделы.
 MILITARY_VIEW = "military.view_militaryrecord"
 
 
@@ -24,8 +24,55 @@ class Report:
     period: str = ""  # подпись периода («Дата приёма»), пусто — отчёт без периода
     perm: str = MILITARY_VIEW
 
+    def is_allowed(self, user):
+        return user.has_perms(
+            ("personnel.view_person", self.perm, *REPORT_PERMISSIONS.get(self.slug, ()))
+        )
+
+
+CARD_PERMISSIONS = (
+    "personnel.view_identitydocument",
+    "military.view_commissariatregistration",
+)
+REPORT_PERMISSIONS = {
+    "reconciliation": CARD_PERMISSIONS
+    + (
+        "personnel.view_address",
+        "personnel.view_relative",
+        "personnel.view_education",
+    ),
+    "reservation": CARD_PERMISSIONS + ("personnel.view_assignment",),
+    "hired": CARD_PERMISSIONS,
+    "reserved-dismissed": CARD_PERMISSIONS + ("military.view_reservationdismissal",),
+    "conscripts": CARD_PERMISSIONS
+    + (
+        "personnel.view_address",
+        "personnel.view_education",
+        "personnel.view_assignment",
+    ),
+}
+FILTER_REPORT_PERMISSIONS = (
+    "personnel.view_person",
+    MILITARY_VIEW,
+    "personnel.view_identitydocument",
+    "personnel.view_address",
+    "personnel.view_relative",
+    "personnel.view_education",
+)
 
 REPORTS = [
+    Report(
+        "reconciliation",
+        "Список пребывающих в запасе для сверки",
+        "Работающие военнообязанные: воинские сведения, документы, адрес, образование и родственники.",
+        lists.reconciliation,
+    ),
+    Report(
+        "unaccounted",
+        "Неучтённые",
+        "Работающие без воинских сведений либо без вида учёта и примечания.",
+        lists.unaccounted,
+    ),
     Report(
         "headcount",
         "Численность",
@@ -40,14 +87,14 @@ REPORTS = [
     ),
     Report(
         "reservation",
-        "Форма бронирования",
+        "Форма к распоряжению",
         "Работающие военнообязанные без внешних совместителей; листы «Приложение 1» "
         "(ВУС из перечня) и «Приложение 2» (документ, отмеченный в справочнике).",
         lists.reservation_form,
     ),
     Report(
         "hired",
-        "Принятые с бронью и в команду",
+        "Отчёт по принятым",
         "Работающие с видом учёта X4 или R7, принятые за период.",
         lists.hired,
         period="Дата приёма",
@@ -77,4 +124,4 @@ def get_report(slug):
 
 def available(user):
     """Отчёты, доступные пользователю."""
-    return [report for report in REPORTS if user.has_perm(report.perm)]
+    return [report for report in REPORTS if report.is_allowed(user)]

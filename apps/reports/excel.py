@@ -15,6 +15,7 @@ XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 def _fill_sheet(sheet, title, headers, rows):
     """Лист: шапка (закреплена, с автофильтром), строки, ширина колонок по данным."""
+    rows = list(rows)
     sheet.title = title[:31]  # ограничение Excel на имя листа
     sheet.append(headers)
     for row in rows:
@@ -37,6 +38,9 @@ def _fill_sheet(sheet, title, headers, rows):
         )
     for row in sheet.iter_rows(min_row=2):
         for cell in row:
+            # Пользовательский текст не должен становиться формулой Excel.
+            if isinstance(cell.value, str):
+                cell.data_type = "s"
             cell.alignment = Alignment(vertical="top", wrap_text=True)
             if hasattr(cell.value, "year"):
                 cell.number_format = "DD.MM.YYYY"

@@ -4,7 +4,7 @@
 (apps.personnel.services.search_people), с колонками старой программы.
 """
 
-from django.db.models import Prefetch
+from django.db.models import F, Prefetch
 
 from apps.personnel.models import Address, Education, IdentityDocument, Relative
 
@@ -54,7 +54,10 @@ def with_report_data(people):
             to_attr="children",
         ),
         Prefetch(
-            "education", Education.objects.order_by("-is_main", "-graduation_date")
+            "education",
+            Education.objects.order_by(
+                "-is_main", F("graduation_date").desc(nulls_last=True), "-pk"
+            ),
         ),
     )
 

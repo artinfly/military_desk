@@ -14,6 +14,6 @@ class HomeView(TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         context["roles"] = list(user.groups.values_list("name", flat=True))
-        if user.has_perm(MILITARY_VIEW):
+        if user.has_perms((MILITARY_VIEW, "personnel.view_person")):
             context["figures"] = figures()
         return context

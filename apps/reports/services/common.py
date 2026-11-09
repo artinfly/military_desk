@@ -7,7 +7,17 @@
 
 from datetime import date
 
-from django.db.models import OuterRef, Prefetch, Q, Subquery
+from django.db.models import F, OuterRef, Prefetch, Q, Subquery
+
+
+def assignment_order():
+    """Датированные приказы раньше недатированных, при равенстве — последний ID."""
+    return (
+        F("order_date").desc(nulls_last=True),
+        F("date_from").desc(nulls_last=True),
+        "-pk",
+    )
+
 
 from apps.military.models import CommissariatRegistration
 from apps.personnel.models import (
@@ -68,7 +78,7 @@ def working_people():
 def without_external_part_timers(people):
     """Без внешних совместителей: вид приказа последнего назначения — «по совм. внеш.»."""
     last_order = Assignment.objects.filter(person=OuterRef("pk")).order_by(
-        "-order_date", "-date_from"
+        *assignment_order()
     )
     # Без назначений (NULL) — не совместитель; NULL надо оставить явно, иначе
     # сравнение с NULL в SQL отбросит строку
@@ -104,15 +114,21 @@ def with_card_data(people):
             "addresses",
             Address.objects.select_related(
                 "address_type", "region", "city", "street"
-            ).order_by("-registration_date", "-date_from"),
+            ).order_by(
+                F("registration_date").desc(nulls_last=True),
+                F("date_from").desc(nulls_last=True),
+                "-pk",
+            ),
         ),
         Prefetch(
             "education",
-            Education.objects.order_by("-graduation_date"),
+            Education.objects.order_by(
+                F("graduation_date").desc(nulls_last=True), "-pk"
+            ),
         ),
         Prefetch(
             "assignments",
-            Assignment.objects.order_by("-order_date", "-date_from"),
+            Assignment.objects.order_by(*assignment_order()),
         ),
     )
 

@@ -3,13 +3,15 @@
 ВУС из перечня для приложения 1: коды, начинающиеся с 450, 451, 453, 485, 763, 907,
 939, 940, 944, и коды из списка VUS_CODES. Код ВУС — цифры в начале названия
 («837037 — Водитель автомобиля») или поле «Код».
-Документ для приложения 2 — «Временное удостоверение взамен военного билета»
-(в старой базе — запись 3767; проверить и при необходимости поправить в справочнике).
+Документ для приложения 2 — запись с кодом 3767: «Справка взамен военного билета»
+или прежнее название «Временное удостоверение взамен военного билета».
 
 Используется миграцией references.0005 и переносом из старой базы (apps.legacy).
 """
 
 import re
+
+from django.db.models import Q
 
 VUS_PREFIXES = ("450", "451", "453", "485", "763", "907", "939", "940", "944")
 _VUS_CODES_TEXT = """
@@ -45,6 +47,7 @@ def mark_reservation_flags(speciality_model, document_model):
     """Ставит флажки по правилам выше (снятые вручную флажки не трогает — только ставит)."""
     listed = [s.pk for s in speciality_model.objects.all() if in_list(s)]
     speciality_model.objects.filter(pk__in=listed).update(in_reservation_list=True)
-    document_model.objects.filter(name=APPENDIX_DOCUMENT).update(
-        in_reservation_appendix=True
-    )
+    document_model.objects.filter(
+        Q(code="3767")
+        | Q(name__in=(APPENDIX_DOCUMENT, "Справка взамен военного билета"))
+    ).update(in_reservation_appendix=True)

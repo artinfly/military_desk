@@ -9,7 +9,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from apps.military.models import ReservationDismissal
-from apps.personnel.models import Person
+from apps.personnel.models import Person, Relative
 
 from .common import (
     EXCLUDED_HIRE_SOURCE,
@@ -22,6 +22,7 @@ from .common import (
     age,
     commissariat,
     current_registration,
+    day,
     higher_education,
     living_address,
     military_document,
@@ -260,3 +261,111 @@ def vus_by_account(params):
     if data:
         data.append(["Итого", *(sum(r[i] for r in data) for i in range(1, 5))])
     return [("ВУС по видам учёта", headers, data)]
+
+
+RECONCILIATION_HEADERS = [
+    "ФИО",
+    "Звание",
+    "Категория запаса",
+    "Состав",
+    "ВУС",
+    "Категория годности",
+    "Категория учёта",
+    "Дата рождения, место",
+    "Образование",
+    "Серия номер",
+    "Подразделение",
+    "СНИЛС",
+    "ИНН",
+    "Место жительства",
+    "Цех/Отдел",
+    "Должность",
+    "Военкомат",
+    "Родственники",
+]
+
+
+def reconciliation(params):
+    """Одна строка на работающего военнообязанного, независимо от числа разделов."""
+    from django.db.models import Prefetch
+
+    people = (
+        with_card_data(working_people().filter(IS_LIABLE))
+        .select_related("military__reserve_category", "military__fitness_category")
+        .prefetch_related(
+            Prefetch("relatives", Relative.objects.select_related("relation"))
+        )
+        .order_by("last_name", "first_name", "patronymic", "pk")
+    )
+    rows = []
+    for person in people:
+        military = person.military
+        documents = list(person.documents.all())
+        document = next(
+            (
+                d
+                for d in documents
+                if "паспорт гражданина" in d.document_type.name.lower()
+            ),
+            documents[0] if documents else None,
+        )
+        account_type = text(military.special_account_type)
+        if military.is_reserved and military.reservation_document:
+            account_type += f" ({military.reservation_document})"
+        education = "; ".join(
+            " — ".join(v for v in (e.education_type, e.institution, e.speciality) if v)
+            for e in person.education.all()
+        )
+        relatives = "; ".join(
+            f"{r}" + (f", {day(r.birth_date)}" if r.birth_date else "")
+            for r in person.relatives.all()
+        )
+        rows.append(
+            [
+                person.full_name,
+                text(military.rank),
+                text(military.reserve_category),
+                text(military.reserve_composition),
+                text(military.speciality),
+                text(military.fitness_category),
+                account_type,
+                ", ".join(v for v in (day(person.birth_date), person.birth_place) if v),
+                education,
+                f"{document.series} {document.number}".strip() if document else "",
+                document.issued_by if document else "",
+                person.snils,
+                person.inn,
+                living_address(person),
+                workshop(person),
+                person.position,
+                commissariat(person),
+                relatives,
+            ]
+        )
+    return [("Сверка запаса", RECONCILIATION_HEADERS, rows)]
+
+
+def unaccounted(params):
+    """Работающие без воинских сведений либо без вида учёта и пояснения."""
+    people = (
+        working_people()
+        .filter(
+            Q(military__isnull=True)
+            | (
+                IS_LIABLE
+                & Q(military__special_account_type__isnull=True, military__note="")
+            )
+        )
+        .select_related("department")
+        .order_by("last_name", "first_name", "pk")
+    )
+    return [
+        (
+            "Неучтённые",
+            ["Таб. номер", "ФИО", "Дата рождения", "Место работы"],
+            [
+                [p.tab_number, p.full_name, p.birth_date, text(p.department)]
+                for p in people
+            ],
+        )
+    ]

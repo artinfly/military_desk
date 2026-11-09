@@ -2,6 +2,7 @@
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views import View
@@ -11,7 +12,7 @@ from apps.personnel.services import search_people, sort_people
 
 from .excel import build_sheets, build_workbook, xlsx_response
 from .forms import PeriodForm
-from .registry import available, get_report
+from .registry import FILTER_REPORT_PERMISSIONS, available, get_report
 from .services.filter_report import FILTER_REPORT_HEADERS, filter_report_rows
 
 
@@ -19,10 +20,15 @@ class FilterReportView(View):
     """«Отчёт по фильтру»: люди из списка карточек с теми же фильтрами и сортировкой."""
 
     def get(self, request):
-        if not request.user.has_perm("personnel.view_person"):
+        if not request.user.has_perms(FILTER_REPORT_PERMISSIONS):
             raise PermissionDenied("Нет доступа к учётным карточкам")
-        form = PersonFilterForm(request.GET or None)
-        filters = form.cleaned_data if form.is_valid() else {}
+        form = PersonFilterForm(request.GET, user=request.user)
+        if not form.is_valid():
+            return HttpResponseBadRequest(
+                "Не удалось сформировать отчёт: исправьте фильтры в списке карточек.",
+                content_type="text/plain; charset=utf-8",
+            )
+        filters = form.cleaned_data
         people, _sort = sort_people(search_people(filters), request.GET.get("sort", ""))
         content = build_workbook(
             "Отчёт по фильтру", FILTER_REPORT_HEADERS, filter_report_rows(people)
@@ -50,7 +56,7 @@ class ReportDownloadView(View):
 
     def get(self, request, slug):
         report = get_report(slug)
-        if not request.user.has_perm(report.perm):
+        if not report.is_allowed(request.user):
             raise PermissionDenied("Нет доступа к отчёту")
         form = PeriodForm(request.GET)
         if not form.is_valid():

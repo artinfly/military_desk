@@ -2,8 +2,10 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block head_title %}{{ page_title }}{% endblock %} — Военно-учётный стол</title>
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <link rel="stylesheet" href="{% static 'css/exchange.css' %}">
 </head>
 <body>
 <div class="layout">
@@ -71,5 +73,7 @@
         </main>
     </div>
 </div>
+{% include "includes/reference_picker.html" %}
+<script src="{% static 'js/reference_picker.js' %}" defer></script>
 </body>
 </html>

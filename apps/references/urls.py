@@ -6,6 +6,7 @@ app_name = "references"
 
 urlpatterns = [
     path("", views.CatalogView.as_view(), name="catalog"),
+    path("<slug:slug>/choices/", views.ReferenceChoicesView.as_view(), name="choices"),
     path("<slug:slug>/", views.ReferenceListView.as_view(), name="list"),
     path("<slug:slug>/add/", views.ReferenceFormView.as_view(), name="add"),
     path("<slug:slug>/<int:pk>/", views.ReferenceFormView.as_view(), name="edit"),

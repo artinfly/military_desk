@@ -6,10 +6,13 @@
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.forms import modelform_factory
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.views import View
 from django.views.generic import FormView, ListView, TemplateView
 
 from .registry import get_reference, sections
@@ -104,6 +107,38 @@ class ReferenceListView(ReferenceMixin, ListView):
             can_change=user.has_perm(self.ref.perm("change")),
         )
         return context
+
+
+class ReferenceChoicesView(ReferenceMixin, View):
+    """Действующие записи для окна выбора; права те же, что у справочника."""
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.ref.model.objects.active()
+        query = request.GET.get("q", "").strip()[:255]
+        if query:
+            condition = Q(name__icontains=query) | Q(code__icontains=query)
+            if any(f.name == "number" for f in self.ref.model._meta.fields):
+                condition |= Q(number__icontains=query)
+            queryset = queryset.filter(condition)
+        # PK разрешает совпадение порядка и названия при переходе между страницами.
+        ordering = list(queryset.model._meta.ordering or [])
+        page = Paginator(queryset.order_by(*ordering, "pk"), 25).get_page(
+            request.GET.get("page", 1)
+        )
+        response = JsonResponse(
+            {
+                "results": [
+                    {"id": str(obj.pk), "label": str(obj), "code": obj.code}
+                    for obj in page
+                ],
+                "page": page.number,
+                "count": page.paginator.count,
+                "has_previous": page.has_previous(),
+                "has_next": page.has_next(),
+            }
+        )
+        response["Cache-Control"] = "private, no-store"
+        return response
 
 
 class ReferenceFormView(ReferenceMixin, FormView):

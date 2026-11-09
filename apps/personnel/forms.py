@@ -27,7 +27,6 @@ GENERAL_FIELDSETS = (
             "nationality",
             "inn",
             "snils",
-            "card_number",
             "phone",
             "email",
         ),

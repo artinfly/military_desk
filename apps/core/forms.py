@@ -4,6 +4,8 @@ from django import forms
 from django.db import models
 from django.db.models import Q
 
+from .widgets import use_reference_picker
+
 
 class DateInput(forms.DateInput):
     """Поле даты с календарём браузера (значение в формате ГГГГ-ММ-ДД)."""
@@ -49,3 +51,4 @@ class BaseModelForm(forms.ModelForm):
                 continue
             current = getattr(self.instance, f"{name}_id", None)
             field.queryset = queryset.filter(Q(is_active=True) | Q(pk=current))
+            use_reference_picker(field)

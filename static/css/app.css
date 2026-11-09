@@ -2,7 +2,7 @@
  *
  * Тёмная боковая панель, оранжевый акцент (#e07b2a), шрифт Golos Text
  * (static/fonts, работает без интернета; лицензия SIL OFL — static/fonts/OFL.txt).
- * Только для ПК: минимальная ширина страницы 1280px.
+ * Адаптация под небольшие экраны; широкие таблицы прокручиваются отдельно.
  */
 
 /* --- Шрифт: один вариативный файл на алфавит (начертания 400–900) --- */
@@ -52,7 +52,7 @@
 
 body {
     margin: 0;
-    min-width: 1280px;
+    min-width: 320px;
     background: var(--bg);
     color: var(--text);
     font: 15px/1.5 var(--font);
@@ -171,10 +171,11 @@ a { color: var(--accent-dark); }
 
 .operations { display: grid; gap: 16px; max-width: 760px; }
 
-.report-list { display: grid; gap: 12px; max-width: 980px; }
-.report { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+.report-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; max-width: 980px; }
+.report { display: flex; flex-wrap: wrap; min-width: 0; justify-content: space-between; align-items: center; gap: 24px; }
+.report-text { flex: 1 1 250px; min-width: 0; overflow-wrap: anywhere; }
 .report-text p { margin: 0; }
-.report-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.report-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%; }
 .report-actions input { width: 140px; }
 
 .figures { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
@@ -220,6 +221,7 @@ a { color: var(--accent-dark); }
 .field-error input, .field-error select { border-color: var(--danger); }
 .field-error-text { margin-top: 4px; color: var(--danger); font-size: 13px; }
 .checkbox { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.field input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; margin: 0; padding: 0; }
 
 .form { max-width: 640px; }
 .form-actions { display: flex; gap: 8px; margin-top: 8px; }
@@ -352,3 +354,51 @@ a { color: var(--accent-dark); }
 }
 .brand-centered { justify-content: center; padding: 0 0 22px; border-bottom: none; }
 .brand-centered .brand-name { color: var(--text); }
+
+/* Большие справочники: выбранное значение и отдельное окно поиска. */
+.reference-picker { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.reference-picker .reference-picker-value { flex: 1; min-width: 0; width: 100%; text-overflow: ellipsis; }
+.reference-picker .btn { flex-shrink: 0; }
+.reference-dialog { width: min(860px, 90vw); max-height: 85vh; padding: 24px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); font: 15px/1.5 var(--font); }
+.reference-dialog::backdrop { background: rgba(0, 0, 0, .45); }
+.reference-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.reference-dialog-head h2 { margin: 0 0 16px; font-size: 20px; }
+.reference-search { margin: 8px 0; }
+.reference-search-row { display: flex; gap: 8px; margin-top: 5px; }
+.reference-search-row input { flex: 1; min-width: 0; }
+.reference-results { max-height: 45vh; overflow: auto; }
+.reference-results th { position: sticky; top: 0; }
+.reference-dialog-actions { display: flex; justify-content: space-between; margin-top: 16px; }
+.reference-dialog button:disabled { opacity: .5; cursor: default; }
+
+/* Широкие таблицы не обрезаются краем панели. */
+.panel-flush { overflow-x: auto; }
+.table-scroll .table { min-width: 1050px; }
+.filters-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.card-head, .form-actions { flex-wrap: wrap; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 1100px) {
+    .blocks, .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sidebar { width: 210px; }
+    .filters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+    .layout { display: block; }
+    .sidebar { position: static; width: 100%; height: auto; }
+    .sidebar nav { display: flex; flex-wrap: wrap; }
+    .nav-section { flex: 1; min-width: 150px; }
+    .sidebar-footer { padding: 12px 18px; }
+    .blocks, .form-grid, .catalog, .filters-grid { grid-template-columns: minmax(0, 1fr); }
+    .content { padding: 16px; }
+    .topbar { padding: 14px 16px; }
+    .page-title { font-size: 22px; overflow-wrap: anywhere; }
+    .filters-row, .list-summary { flex-wrap: wrap; }
+    .filters-search { min-width: 0; width: 100%; flex-basis: 100%; }
+    .filters-search input { width: 100%; }
+    .props { grid-template-columns: minmax(0, 1fr); }
+    .props dd { margin-bottom: 8px; }
+    .report { flex-wrap: wrap; }
+    .report-actions { flex-wrap: wrap; min-width: 0; }
+    .report-actions input { max-width: 100%; }
+    .login-card { max-width: calc(100vw - 32px); }
+}

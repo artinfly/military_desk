@@ -1,0 +1,24 @@
+<dialog id="reference-picker-dialog" class="reference-dialog" aria-labelledby="reference-picker-title">
+    <div class="reference-dialog-head">
+        <h2 id="reference-picker-title">Выбор записи</h2>
+        <button type="button" class="btn btn-small" id="reference-picker-close">Закрыть</button>
+    </div>
+    <form id="reference-picker-search" class="reference-search" method="dialog">
+        <label for="reference-picker-query">Название или код</label>
+        <div class="reference-search-row">
+            <input id="reference-picker-query" class="input" type="search" autocomplete="off">
+            <button class="btn btn-primary" type="submit">Найти</button>
+        </div>
+    </form>
+    <p id="reference-picker-status" class="muted" role="status" aria-live="polite"></p>
+    <div class="reference-results">
+        <table class="table">
+            <thead><tr><th>Название</th><th>Код</th><th>Выбор</th></tr></thead>
+            <tbody id="reference-picker-results"></tbody>
+        </table>
+    </div>
+    <div class="reference-dialog-actions">
+        <button type="button" class="btn" id="reference-picker-previous">Назад</button>
+        <button type="button" class="btn" id="reference-picker-next">Далее</button>
+    </div>
+</dialog>

@@ -1,0 +1,6 @@
+<span class="reference-picker" data-picker-url="{{ widget.picker_url }}" data-picker-title="{{ widget.picker_title }}" data-picker-empty-label="{{ widget.picker_empty_label }}">
+    <input type="hidden" name="{{ widget.name }}" value="{{ widget.picker_value }}"{% include "django/forms/widgets/attrs.html" %}>
+    <input type="text" class="input reference-picker-value"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_display"{% endif %} value="{{ widget.picker_value_label }}" readonly aria-label="{{ widget.picker_title }}"{% if widget.attrs.disabled %} disabled{% endif %}>
+    <button type="button" class="btn btn-small reference-picker-open"{% if widget.attrs.disabled %} disabled{% endif %}>Выбрать</button>
+    {% if not widget.picker_required %}<button type="button" class="btn btn-small reference-picker-clear" aria-label="Сбросить выбор {{ widget.picker_title }}" title="Сбросить выбор"{% if widget.attrs.disabled %} disabled{% endif %}>×</button>{% endif %}
+</span>

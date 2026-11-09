@@ -2,6 +2,13 @@
 
 {% block content %}
 <div class="operations">
+    <form class="panel" method="post" enctype="multipart/form-data">
+        {% csrf_token %}<input type="hidden" name="action" value="reserve">
+        <h2 class="panel-title">Бронирование по файлу</h2>
+        <p class="muted">Работающим сотрудникам из списка устанавливаются бронь, вид учёта и приказ. Файл .xlsx: СНИЛС в первой колонке, со второй строки.</p>
+        {% include "includes/form_fields.html" with form=reserve_form %}
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Забронировать</button></div>
+    </form>
     <form class="panel" method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="account_type">
@@ -13,6 +20,7 @@
         </div>
     </form>
 
+    {% if can_update_dismissed %}
     <form class="panel" method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="dismissed">
@@ -26,6 +34,7 @@
             <button class="btn btn-primary" type="submit">Обновить</button>
         </div>
     </form>
+    {% endif %}
 
     <form class="panel" method="post" enctype="multipart/form-data">
         {% csrf_token %}
@@ -33,7 +42,8 @@
         <h2 class="panel-title">Разбронирование по файлу</h2>
         <p class="muted">
             Работающим из файла снимается бронь, ставится группа «Общий учёт»,
-            записывается номер приказа, удостоверение об отсрочке очищается.
+            записывается номер приказа, прежний приказ о бронировании очищается.
+            Файл .xlsx: первая строка — заголовок, СНИЛС — в первой колонке со второй строки.
         </p>
         {% include "includes/form_fields.html" with form=unreserve_form %}
         <div class="form-actions">

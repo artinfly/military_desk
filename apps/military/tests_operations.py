@@ -133,12 +133,12 @@ class OperationsViewTests(TestCase):
             {
                 "action": "unreserve",
                 "order": "77-р",
-                "file": xlsx_file(["12345678901", "1"]),
+                "file": xlsx_file(["12345678901", "99999999999"]),
             },
             follow=True,
         )
         self.assertContains(response, "Разбронировано: 1.")
-        self.assertContains(response, "Не найдены среди работающих (1): 1.")
+        self.assertContains(response, "Не найдены среди работающих (1): 99999999999.")
 
     def test_bad_file(self):
         self.client.force_login(make_user("operator", OPERATOR))

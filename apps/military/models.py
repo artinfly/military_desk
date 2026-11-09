@@ -62,7 +62,7 @@ class MilitaryRecord(TimeStampedModel):
     # Бронирование
     is_reserved = models.BooleanField("Забронирован", default=False)
     reservation_document = models.CharField(
-        "Удостоверение об отсрочке (номер)", max_length=50, blank=True
+        "Приказ о бронировании", max_length=50, blank=True
     )
     unreservation_order = models.CharField(
         "Приказ о разбронировании", max_length=50, blank=True

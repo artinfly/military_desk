@@ -38,3 +38,12 @@ class UnreserveForm(forms.Form):
         if not file.name.lower().endswith(".xlsx"):
             raise forms.ValidationError("Нужен файл Excel в формате .xlsx.")
         return file
+
+
+class ReserveForm(UnreserveForm):
+    order = forms.CharField(label="Номер приказа о бронировании", max_length=50)
+    account_type = forms.ModelChoiceField(
+        SpecialAccountType.objects.active().filter(code__in=("X4", "R7")),
+        label="Вид учёта",
+        empty_label="— выберите —",
+    )

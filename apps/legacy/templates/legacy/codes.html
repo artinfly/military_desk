@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="breadcrumbs"><a href="{% url 'legacy:exchange' %}">Обмен данными</a> / Коды первого отдела</div>
+<section class="panel">
+    <form method="get" class="form-actions">
+        <label>ОКПДТР <input name="q" value="{{ query }}" placeholder="Поиск по коду"></label>
+        <label class="checkbox"><input type="checkbox" name="unmapped" value="1" {% if request.GET.unmapped %}checked{% endif %}> Без строки NS</label>
+        <button class="btn">Найти</button>
+    </form>
+    <div class="table-wrap">
+        <table class="table">
+            <thead><tr><th>ОКПДТР</th><th>Строка первого отдела</th><th></th></tr></thead>
+            <tbody>
+                {% for code, form in rows %}
+                <tr>
+                    <td>{{ code.code }}</td>
+                    <td colspan="2">
+                        <form class="form-actions" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="code" value="{{ code.pk }}">
+                            <label class="sr-only" for="ns-{{ code.pk }}">Строка NS для {{ code.code }}</label>
+                            <input id="ns-{{ code.pk }}" name="row_number" type="number" min="1" max="99" value="{{ code.row_number|default_if_none:'' }}">
+                            <button class="btn">Сохранить</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}<tr><td colspan="3" class="empty">Коды не найдены</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "includes/pagination.html" %}
+</section>
+{% endblock %}

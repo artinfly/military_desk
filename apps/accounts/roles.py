@@ -9,6 +9,7 @@
 Права, добавленные группе вручную в админке, при синхронизации сбрасываются к описанию.
 """
 
+from django.apps import apps
 from django.contrib.auth.models import Group, Permission
 
 ALL = ("view", "add", "change", "delete")
@@ -23,16 +24,29 @@ ROLES = {
             "references": ("view",),
             "personnel": ("view",),
             "military": ("view",),
+            "reports": ("view",),
         },
         "except": (),
     },
     OPERATOR: {
-        "apps": {"references": ("view",), "personnel": ALL, "military": ALL},
+        "apps": {
+            "references": ("view",),
+            "personnel": ALL,
+            "military": ALL,
+            "reports": ("view",),
+            "legacy": ("view", "add"),
+        },
         # Удалить карточку целиком — только администратор учёта
         "except": ("personnel.delete_person",),
     },
     ADMIN: {
-        "apps": {"references": ALL, "personnel": ALL, "military": ALL},
+        "apps": {
+            "references": ALL,
+            "personnel": ALL,
+            "military": ALL,
+            "reports": ALL,
+            "legacy": ALL,
+        },
         "except": (),
     },
 }
@@ -44,7 +58,12 @@ def role_permissions(role):
     ids = [
         perm.pk
         for app_label, actions in spec["apps"].items()
-        for perm in Permission.objects.filter(content_type__app_label=app_label)
+        for perm in Permission.objects.filter(
+            content_type__app_label=app_label,
+            content_type__model__in=[
+                m._meta.model_name for m in apps.get_app_config(app_label).get_models()
+            ],
+        )
         if perm.codename.split("_", 1)[0] in actions
     ]
     permissions = Permission.objects.filter(pk__in=ids)

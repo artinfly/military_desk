@@ -1,6 +1,7 @@
 """Роли: группы с правами и что каждая роль может на сайте."""
 
 from django.contrib.auth.models import Group, Permission
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.urls import reverse
 
@@ -9,7 +10,7 @@ from apps.personnel.models import Person
 from apps.personnel.tests import make_person
 from apps.references import models as ref
 
-from .roles import ADMIN, OPERATOR, ROLES, VIEWER, sync_roles
+from .roles import ADMIN, OPERATOR, ROLES, VIEWER, role_permissions, sync_roles
 from .testing import make_user
 
 
@@ -21,6 +22,19 @@ def perms(role):
 
 
 class RoleGroupsTests(TestCase):
+    def test_roles_do_not_grant_permissions_for_removed_models(self):
+        content_type = ContentType.objects.create(
+            app_label="military", model="removedsection"
+        )
+        stale = Permission.objects.create(
+            content_type=content_type,
+            codename="view_removedsection",
+            name="Removed section",
+        )
+        self.assertNotIn(stale, role_permissions(VIEWER))
+        sync_roles()
+        self.assertNotIn("military.view_removedsection", perms(VIEWER))
+
     def test_groups_created_after_migrate(self):
         self.assertEqual(
             set(Group.objects.values_list("name", flat=True)) & set(ROLES), set(ROLES)
@@ -73,9 +87,7 @@ class RoleAccessTests(TestCase):
         self.client.force_login(make_user("viewer", VIEWER))
         home = self.client.get(reverse("core:home"))
         self.assertContains(home, "Ваши роли: Просмотр")
-        self.assertEqual(
-            self.menu(home), ["Главная", "Учётные карточки", "Справочники", "Отчёты"]
-        )
+        self.assertEqual(self.menu(home), ["Главная", "Учётные карточки", "Отчёты"])
         card = self.client.get(
             reverse("personnel:detail", args=[self.person.pk]), {"tab": "military"}
         )

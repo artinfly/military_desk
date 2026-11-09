@@ -10,5 +10,6 @@ urlpatterns = [
     path("people/", include("apps.personnel.urls")),
     path("military/", include("apps.military.urls")),
     path("reports/", include("apps.reports.urls")),
+    path("exchange/", include("apps.legacy.urls")),
     path("", include("apps.core.urls")),
 ]

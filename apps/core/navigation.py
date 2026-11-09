@@ -28,12 +28,6 @@ MENU = [
                 "perm": "personnel.view_person",
             },
             {
-                "label": "Справочники",
-                "url_name": "references:catalog",
-                "namespace": "references",
-                "module": "references",
-            },
-            {
                 "label": "Отчёты",
                 "url_name": "reports:list",
                 "namespace": "reports",
@@ -44,6 +38,10 @@ MENU = [
                 "url_name": "military:operations",
                 "namespace": "military",
                 "perm": "military.change_militaryrecord",
+            },
+            {
+                "label": "Обмен данными", "url_name": "legacy:exchange",
+                "namespace": "legacy", "perm": "legacy.view_importbatch",
             },
         ],
     },

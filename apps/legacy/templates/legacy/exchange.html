@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="muted">Кадровые сведения, коды первого отдела и подготовка DBF. Результаты каждой загрузки сохраняются в журнале.</p>
+
+{% if result %}
+<section class="panel form-panel">
+    <h2 class="panel-title">{% if dry_run %}Проверка завершена — изменения не сохранены{% else %}Данные загружены{% endif %}</h2>
+    <dl class="props">
+        {% for label, count in result.counts.items %}<dt>{{ label }}</dt><dd>{{ count }}</dd>{% endfor %}
+    </dl>
+    {% if result.problems %}
+    <details>
+        <summary>Замечания: {{ result.problems|length }}</summary>
+        <ul>{% for issue in result.problems|slice:":50" %}<li>{{ issue }}</li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+</section>
+{% endif %}
+
+<div class="exchange-grid">
+    {% if can_import %}
+    <section class="panel">
+        <h2 class="panel-title">Загрузка кадровых данных</h2>
+        <p class="muted">TSV в Windows-1251 или UTF-8. Повторная загрузка обновляет записи; ручное бронирование сохраняется. Отсутствующие в файле сотрудники не удаляются.</p>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% include "includes/form_fields.html" with form=upload_form %}
+            <div class="form-actions">
+                <button class="btn" name="action" value="preview">Проверить файл</button>
+                <button class="btn btn-primary" name="action" value="import">Загрузить</button>
+            </div>
+        </form>
+    </section>
+    {% endif %}
+
+    {% if can_export %}
+    <section class="panel">
+        <h2 class="panel-title">Данные в первый отдел</h2>
+        <p class="muted">Получите ZIP с обработанным DBF, списком отклонённых записей и итоговыми количествами.</p>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% include "includes/form_fields.html" with form=dbf_form %}
+            <button class="btn btn-primary" name="action" value="dbf">Подготовить выгрузку</button>
+        </form>
+        <div class="form-actions">
+            <a class="btn" href="{% url 'legacy:spr' %}">Скачать spr.dbf</a>
+            {% if can_edit_codes %}<a class="btn" href="{% url 'legacy:codes' %}">Коды и строки NS</a>{% endif %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<section class="panel">
+    <h2 class="panel-title">Последние загрузки</h2>
+    <div class="table-wrap">
+        <table class="table">
+            <thead><tr><th>Дата</th><th>Пользователь</th><th>Данные</th><th>Результат</th></tr></thead>
+            <tbody>
+                {% for batch in batches %}
+                <tr>
+                    <td>{{ batch.created_at|date:"d.m.Y H:i" }}</td>
+                    <td>{{ batch.created_by.short_name|default:"—" }}</td>
+                    <td>{% if batch.kind == "hr" %}Кадровая выгрузка{% else %}Дополнительные коды{% endif %}</td>
+                    <td><details><summary>Показать итог</summary>{% for label, count in batch.counts.items %}<div>{{ label }}: {{ count }}</div>{% endfor %}</details></td>
+                </tr>
+                {% empty %}<tr><td colspan="4" class="empty">Загрузок пока нет</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

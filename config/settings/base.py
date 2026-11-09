@@ -69,6 +69,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # Все страницы — только после входа (кроме помеченных login_not_required)
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
+    "apps.core.middleware.PrivatePagesMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

@@ -6,6 +6,7 @@ Django на соответствующую модель (personnel.change_person
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -14,6 +15,7 @@ from django.views import View
 from django.views.generic import DetailView, ListView
 
 from apps.core.display import EMPTY, display_value, field_label, field_rows
+from apps.reports.registry import FILTER_REPORT_PERMISSIONS
 
 from .filters import PersonFilterForm
 from .forms import GENERAL_FIELDSETS, PersonForm
@@ -31,7 +33,7 @@ COLUMNS = [
     ("dismissal_date", "Дата увольнения"),
     ("duty", "Военная обязанность"),
     ("department", "Место работы"),
-    (None, "Учёт"),
+    (None, "Приказ о бронировании"),
     (None, "Бронь"),
     (None, "СВО"),
 ]
@@ -78,11 +80,19 @@ class PersonListView(ViewPersonRequired, ListView):
     extra_context = {"page_title": "Учётные карточки"}
 
     def get_queryset(self):
-        self.form = PersonFilterForm(self.request.GET or None)
-        filters = self.form.cleaned_data if self.form.is_valid() else {}
+        self.can_view_military = self.request.user.has_perm(
+            "military.view_militaryrecord"
+        )
+        self.form = PersonFilterForm(self.request.GET, user=self.request.user)
+        if not self.form.is_valid():
+            self.sort = "name"
+            return Person.objects.none()
+        filters = self.form.cleaned_data
         people, self.sort = sort_people(
             search_people(filters), self.request.GET.get("sort", "")
         )
+        if not self.can_view_military and self.sort.lstrip("-") in ("rank", "duty"):
+            people, self.sort = sort_people(people, "name")
         return people
 
     def get_context_data(self, **kwargs):
@@ -103,11 +113,22 @@ class PersonListView(ViewPersonRequired, ListView):
                     "next": f"-{key}" if key and self.sort == key else key,
                 }
                 for key, title in COLUMNS
+                if self.can_view_military
+                or title
+                not in (
+                    "Звание",
+                    "Военная обязанность",
+                    "Приказ о бронировании",
+                    "Бронь",
+                )
             ],
             filter_params=params.urlencode(),
             has_filters=any(
                 v for k, v in self.request.GET.items() if k not in ("page", "sort")
             ),
+            can_view_military=self.can_view_military,
+            can_export=self.request.user.has_perms(FILTER_REPORT_PERMISSIONS)
+            and not self.form.errors,
             can_add=self.request.user.has_perm("personnel.add_person"),
         )
         return context
@@ -308,7 +329,14 @@ class SectionFormView(View):
     def get(self, request, *args, **kwargs):
         return self.render(self.section.form_class()(instance=self.item))
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
+        self.person = Person.objects.select_for_update().get(pk=self.person.pk)
+        if self.section.single:
+            self.item = self.section.model.objects.filter(person=self.person).first()
+            require_perm(
+                request.user, self.section.perm("change" if self.item else "add")
+            )
         form = self.section.form_class()(request.POST, instance=self.item)
         if not form.is_valid():
             return self.render(form)

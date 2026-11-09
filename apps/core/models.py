@@ -1,5 +1,6 @@
 """Общие абстрактные модели для приложений проекта (своих таблиц у core нет)."""
 
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -18,6 +19,13 @@ class PeriodModel(models.Model):
 
     date_from = models.DateField("С", null=True, blank=True)
     date_to = models.DateField("По", null=True, blank=True)
+
+    def clean(self):
+        super().clean()
+        if self.date_from and self.date_to and self.date_to < self.date_from:
+            raise ValidationError(
+                {"date_to": "Дата окончания не может быть раньше даты начала."}
+            )
 
     class Meta:
         abstract = True

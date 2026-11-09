@@ -2,6 +2,7 @@
 
 {% block content %}
 <form class="filters panel" method="get">
+    {% if form.errors %}<div class="message message-error" role="alert">Исправьте условия поиска. Пока ошибки не исправлены, результаты не показываются.{{ form.non_field_errors }}{% for field in form %}{% if field.errors %}<p>{{ field.label }}: {{ field.errors|striptags }}</p>{% endif %}{% endfor %}</div>{% endif %}
     <div class="filters-row">
         <div class="filters-search">{{ form.q }}</div>
         <label class="filter">{{ form.status.label }} {{ form.status }}</label>
@@ -27,10 +28,10 @@
 
 <div class="list-summary">
     <span class="muted">Найдено: {{ paginator.count }}</span>
-    <a class="btn btn-small" href="{% url 'reports:filter' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">Выгрузить в Excel</a>
+    {% if can_export %}<a class="btn btn-small" href="{% url 'reports:filter' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">Выгрузить в Excel</a>{% endif %}
 </div>
 
-<div class="panel panel-flush">
+<div class="panel panel-flush table-scroll">
     {% if object_list %}
     <table class="table table-compact">
         <thead>
@@ -53,17 +54,17 @@
             <td>
                 <a href="{% url 'personnel:detail' person.pk %}">{{ person.full_name }}</a>
             </td>
-            <td>{{ person.military.rank|default:"—" }}</td>
+            {% if can_view_military %}<td>{{ person.military.rank|default:"—" }}</td>{% endif %}
             <td>{{ person.gender }}</td>
             <td>{{ person.birth_date|date:"d.m.Y" }}</td>
             <td>{{ person.dismissal_date|date:"d.m.Y"|default:"—" }}</td>
-            <td>{{ person.military.duty|default:"—" }}</td>
+            {% if can_view_military %}<td>{{ person.military.duty|default:"—" }}</td>{% endif %}
             <td>{{ person.department|default:"—" }}</td>
-            <td>{{ person.military.special_account_type|default:"—" }}</td>
+            {% if can_view_military %}<td>{{ person.military.reservation_document|default:"—" }}</td>
             <td>
                 {% if person.military.is_reserved %}<span class="badge badge-ok" title="{{ person.military.reservation_document }}">Да</span>{% endif %}
             </td>
-            <td>{% if person.is_svo %}<span class="badge badge-warn">СВО</span>{% endif %}</td>
+            {% endif %}<td>{% if person.is_svo %}<span class="badge badge-warn">СВО</span>{% endif %}</td>
         </tr>
         {% endfor %}
         </tbody>

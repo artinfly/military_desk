@@ -74,7 +74,7 @@ class PersonAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     ("citizenship", "nationality"),
-                    ("inn", "snils", "card_number"),
+                    ("inn", "snils"),
                     ("phone", "email"),
                 )
             },

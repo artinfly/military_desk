@@ -84,10 +84,14 @@ def search_people(filters, queryset=None):
 
 def sort_people(people, sort):
     """Сортировка по колонке: «name» — по возрастанию, «-name» — по убыванию."""
-    key = sort.lstrip("-") if sort else DEFAULT_SORT
+    sort = sort or DEFAULT_SORT
+    key = sort.removeprefix("-")
     if key not in SORT_FIELDS:
         key, sort = DEFAULT_SORT, DEFAULT_SORT
     field = SORT_FIELDS[key]
     if sort.startswith("-"):
-        return people.order_by(f"-{field}", "last_name", "first_name"), sort
-    return people.order_by(field, "last_name", "first_name"), sort
+        return (
+            people.order_by(f"-{field}", "last_name", "first_name", "patronymic", "pk"),
+            sort,
+        )
+    return people.order_by(field, "last_name", "first_name", "patronymic", "pk"), sort

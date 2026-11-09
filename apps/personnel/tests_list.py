@@ -127,8 +127,8 @@ class PersonListViewTests(TestCase):
             person = make_person(f"2{n:03d}", last_name=f"Фамилия{n:02d}")
             MilitaryRecord.objects.create(person=person)
         url = reverse("personnel:list")
-        with self.assertNumQueries(11):
-            # Сессия, пользователь, 2 — права (кнопка «Добавить»), счётчик, 5 справочников, страница —
+        with self.assertNumQueries(8):
+            # Сессия, пользователь, 2 — права (кнопка «Добавить»), счётчик, 2 малых справочника, страница —
             # число запросов не зависит от количества карточек
             response = self.client.get(url, {"sort": "-tab_number"})
         self.assertEqual(response.status_code, 200)

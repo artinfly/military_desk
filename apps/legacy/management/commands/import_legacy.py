@@ -16,6 +16,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.legacy import source
+from apps.legacy.dump import read_dump
 from apps.legacy.importer import LegacyImporter
 from apps.personnel.models import Person
 
@@ -28,10 +29,14 @@ class Command(BaseCommand):
     help = "Перенос карточек, воинского учёта и справочников из старой базы «stol»"
 
     def add_arguments(self, parser):
-        parser.add_argument("--host", required=True)
+        source_group = parser.add_mutually_exclusive_group(required=True)
+        source_group.add_argument("--host")
+        source_group.add_argument(
+            "--dump", help="текстовая SQL-выгрузка stol; SQL не исполняется"
+        )
         parser.add_argument("--port", default="5432")
         parser.add_argument("--dbname", default="stol")
-        parser.add_argument("--user", required=True)
+        parser.add_argument("--user")
         parser.add_argument(
             "--dry-run", action="store_true", help="перенести и откатить: только итог"
         )
@@ -48,18 +53,23 @@ class Command(BaseCommand):
                 "(или с --replace: карточки будут удалены и перенесены заново)."
             )
         # Пароль — из переменной окружения (для запуска без вопросов) или вводом
-        password = os.getenv("LEGACY_DB_PASSWORD") or getpass.getpass(
-            "Пароль к старой базе: "
-        )
         try:
-            tables = source.read(
-                options["host"],
-                options["port"],
-                options["dbname"],
-                options["user"],
-                password,
-            )
-        except psycopg.Error as error:
+            if options["dump"]:
+                tables = read_dump(options["dump"])
+            else:
+                if not options["user"]:
+                    raise CommandError("Для подключения к старой базе укажите --user")
+                password = os.getenv("LEGACY_DB_PASSWORD") or getpass.getpass(
+                    "Пароль к старой базе: "
+                )
+                tables = source.read(
+                    options["host"],
+                    options["port"],
+                    options["dbname"],
+                    options["user"],
+                    password,
+                )
+        except (psycopg.Error, OSError, ValueError) as error:
             raise CommandError(f"Не удалось прочитать старую базу: {error}") from error
 
         try:

@@ -47,7 +47,7 @@ class ReportListView(View):
         return render(
             request,
             "reports/report_list.html",
-            {"page_title": "Отчёты", "reports": reports, "period_form": PeriodForm()},
+            {"page_title": "Отчёты", "reports": reports},
         )
 
 

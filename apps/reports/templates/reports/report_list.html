@@ -2,6 +2,7 @@
 
 {% block content %}
 <div class="report-list">
+    <section class="panel report"><div class="report-text"><h2 class="panel-title">Справки о бронировании</h2><p class="muted">Отдельному сотруднику или по цеху. Печать и сохранение в PDF.</p></div><a class="btn" href="{% url 'reports:certificates' %}">Открыть справки</a></section>
     {% for report in reports %}
     <form class="panel report" method="get" action="{% url 'reports:download' report.slug %}">
         <div class="report-text">
@@ -11,8 +12,8 @@
         <div class="report-actions">
             {% if report.period %}
             <span class="muted">{{ report.period }}:</span>
-            <label>с {{ period_form.date_from }}</label>
-            <label>по {{ period_form.date_to }}</label>
+            <label for="{{ report.slug }}-from">с <input type="date" name="date_from" id="{{ report.slug }}-from"></label>
+            <label for="{{ report.slug }}-to">по <input type="date" name="date_to" id="{{ report.slug }}-to"></label>
             {% endif %}
             <button class="btn btn-primary" type="submit">Скачать Excel</button>
         </div>

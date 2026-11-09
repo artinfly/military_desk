@@ -1,0 +1,14 @@
+@page { size: A4; margin: 20mm; }
+.print-page { background: #e9edf2; padding: 24px; }
+.print-toolbar { display: flex; gap: 12px; justify-content: center; margin-bottom: 24px; }
+.certificate-sheet { background: white; color: #111; max-width: 170mm; min-height: 240mm; padding: 20mm; margin: 0 auto 24px; box-sizing: content-box; box-shadow: 0 4px 24px #25344a18; }
+.certificate-sheet h1 { text-align: center; margin: 24px 0 36px; font-size: 22px; }
+.certificate-organization { text-align: center; white-space: pre-wrap; }
+.certificate-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.7; }
+@media print {
+    .print-page { padding: 0; background: white; }
+    .print-toolbar { display: none; }
+    .certificate-sheet { max-width: none; min-height: 0; padding: 0; margin: 0; box-shadow: none; break-after: page; }
+    .certificate-sheet:last-child { break-after: auto; }
+}
+@media screen and (max-width: 850px) { .certificate-sheet { max-width: 100%; min-height: 0; padding: 24px; box-sizing: border-box; } }

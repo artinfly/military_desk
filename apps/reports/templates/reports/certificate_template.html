@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="breadcrumbs"><a href="{% url 'reports:certificates' %}">Справки</a> / Шаблон</div>
+<section class="panel form-panel"><form method="post">{% csrf_token %}
+{% include "includes/form_fields.html" %}
+<p class="muted">Доступные поля: {% for field in fields %}<code>{% templatetag openvariable %}{{ field }}{% templatetag closevariable %}</code>{% if not forloop.last %}, {% endif %}{% endfor %}. Остальной текст печатается без изменений.</p>
+<div class="form-actions"><button class="btn btn-primary" type="submit">Сохранить шаблон</button><a class="btn" href="{% url 'reports:certificates' %}">Отмена</a></div>
+</form></section>
+<details class="panel"><summary>Исходный макет</summary><p class="muted">Перед выдачей справок внесите утверждённый текст, организацию и реквизиты.</p><pre class="certificate-body">{{ default_body }}</pre></details>
+{% endblock %}

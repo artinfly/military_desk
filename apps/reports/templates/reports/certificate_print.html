@@ -1,0 +1,24 @@
+{% load static %}<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <link rel="stylesheet" href="{% static 'css/print.css' %}">
+    <script src="{% static 'js/print.js' %}" defer></script>
+</head>
+<body class="print-page">
+    <div class="print-toolbar">
+        <a class="btn" href="{% url 'reports:certificates' %}">К справкам</a>
+        {% if certificates %}<button type="button" class="btn btn-primary" data-print>Печать / сохранить PDF</button>{% endif %}
+    </div>
+    {% for person, body in certificates %}
+    <article class="certificate-sheet">
+        <div class="certificate-organization">{{ template.organization }}</div>
+        <h1>{{ template.name }}</h1>
+        <div class="certificate-body">{{ body }}</div>
+    </article>
+    {% empty %}<div class="panel">В выбранном цехе нет работающих забронированных сотрудников.</div>{% endfor %}
+</body>
+</html>

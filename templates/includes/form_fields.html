@@ -3,6 +3,7 @@
 <div class="message message-error">{{ form.non_field_errors|join:" " }}</div>
 {% endif %}
 {% for field in form %}
+{% if field.is_hidden %}{{ field }}{% else %}
 <div class="field{% if field.errors %} field-error{% endif %}">
     {% if field.widget_type == "checkbox" %}
     <label class="checkbox">{{ field }} {{ field.label }}</label>
@@ -13,4 +14,5 @@
     {% if field.help_text %}<div class="field-help">{{ field.help_text }}</div>{% endif %}
     {% for error in field.errors %}<div class="field-error-text">{{ error }}</div>{% endfor %}
 </div>
+{% endif %}
 {% endfor %}

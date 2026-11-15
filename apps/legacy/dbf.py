@@ -14,6 +14,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+from apps.military.account_codes import require_account_codes
 from apps.personnel.models import Person
 
 
@@ -32,7 +33,7 @@ class DbfTable:
         position = 32
         while position < self.header_length and raw[position] != 13:
             descriptor = raw[position : position + 32]
-            if len(descriptor) != 32:
+            if position + 32 >= self.header_length:
                 raise ValidationError("Оборвано описание полей DBF.")
             try:
                 name = descriptor[:11].split(b"\0")[0].decode("ascii").upper()
@@ -76,7 +77,11 @@ class DbfTable:
         if kind in "NF" and value:
             try:
                 number = Decimal(value)
-                if number.is_finite() and number == number.to_integral_value():
+                if (
+                    number.is_finite()
+                    and number.adjusted() < size
+                    and number == number.to_integral_value()
+                ):
                     return str(int(number))
             except InvalidOperation:
                 pass
@@ -154,11 +159,14 @@ def convert_dbf(raw, kind, known_codes=()):
         key_field = "TABNOM"
     else:
         raise ValidationError("Неизвестный вид обмена DBF.")
+    codes = require_account_codes()
+    export_codes = {codes["reserved"]: "2", codes["team"]: "1", codes["general"]: "3"}
+    booking = {codes["reserved"], codes["team"]}
     people = {
-        p.tab_number.upper(): p
-        for p in Person.objects.select_related(
-            "military__special_account_type", "military__duty"
-        )
+        tab.upper(): (account or "", duty)
+        for tab, account, duty in Person.objects.values_list(
+            "tab_number", "military__special_account_type__code", "military__duty__name"
+        ).iterator(chunk_size=2000)
     }
     result, rejected, seen, missing = [], [], set(), set()
     known = set(known_codes)
@@ -166,13 +174,7 @@ def convert_dbf(raw, kind, known_codes=()):
     for number, record in table.records():
         value = lambda name: table.value(record, name)
         tab = value(key_field).upper()
-        person = people.get(tab)
-        military = getattr(person, "military", None) if person else None
-        account = (
-            military.special_account_type.code
-            if military and military.special_account_type
-            else ""
-        )
+        account, duty = people.get(tab, ("", None))
         reasons = []
         if not tab:
             reasons.append("Нет табельного номера")
@@ -183,7 +185,7 @@ def convert_dbf(raw, kind, known_codes=()):
                 reasons.append("PRIZNAK должен быть от 1 до 5")
             if not integer_in_range(value("CATEG_ID"), 1, 6):
                 reasons.append("CATEG_ID должен быть от 1 до 6")
-            if account in ("X4", "R7") and value("MIL").upper() in ("N", "P"):
+            if account in booking and value("MIL").upper() in ("N", "P"):
                 reasons.append("Вид учёта несовместим со значением MIL")
         else:
             if value("MER") in ("05", "07", "08", "15"):
@@ -192,11 +194,8 @@ def convert_dbf(raw, kind, known_codes=()):
                 reasons.append("ZK заполнено")
             if not re.fullmatch(r"[0-9]{6}", value("PROF")):
                 reasons.append("PROF должен содержать 6 цифр")
-            liable = (
-                military and military.duty and military.duty.name == "Военнообязанный"
-            )
             output_account = (
-                {"X4": "2", "R7": "1", "H9": "3"}.get(account, "") if liable else ""
+                export_codes.get(account, "") if duty == "Военнообязанный" else ""
             )
             # Проверка выходного значения тоже обязательна: старый загрузчик её пропускал.
             if (value("SPECUH") or output_account) and not integer_in_range(

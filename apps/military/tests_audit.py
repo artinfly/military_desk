@@ -4,7 +4,12 @@ from threading import Barrier
 
 from django.core.exceptions import ValidationError
 from django.db import close_old_connections
-from django.test import TestCase, TransactionTestCase, skipUnlessDBFeature
+from django.test import (
+    override_settings,
+    TestCase,
+    TransactionTestCase,
+    skipUnlessDBFeature,
+)
 from django.utils import timezone
 
 from apps.accounts.testing import make_user
@@ -17,13 +22,22 @@ from .models import MilitaryRecord, ReservationDismissal
 from .tests_operations import xlsx_file
 
 
+@override_settings(
+    MILITARY_ACCOUNT_CODES={
+        "reserved": "DEMO-BOOK",
+        "team": "DEMO-TEAM",
+        "general": "DEMO-GENERAL",
+    }
+)
 class MassOperationAuditTests(TestCase):
     def setUp(self):
         self.actor = make_user("operator-audit")
         self.general = ref.SpecialAccountType.objects.create(
-            name="Общий учёт", code="H9"
+            name="Общий учёт", code="DEMO-GENERAL"
         )
-        self.team = ref.SpecialAccountType.objects.create(name="Команда", code="R7")
+        self.team = ref.SpecialAccountType.objects.create(
+            name="Команда", code="DEMO-TEAM"
+        )
         self.person = make_person(snils="001-234-567 89")
         self.record = MilitaryRecord.objects.create(
             person=self.person,
@@ -42,7 +56,7 @@ class MassOperationAuditTests(TestCase):
         self.assertGreater(self.person.updated_at, self.before)
         self.assertGreater(self.record.updated_at, self.before)
 
-    def test_missing_or_inactive_h9_rolls_back(self):
+    def test_missing_or_inactive_general_code_rolls_back(self):
         self.general.is_active = False
         self.general.save()
         with self.assertRaises(ValidationError):

@@ -23,7 +23,7 @@ from apps.reports.services.common import without_external_part_timers
 class AuditRegressionTests(TestCase):
     def test_formula_text_and_excel_types(self):
         rows = iter(
-            [['=HYPERLINK("https://example.org")', "00123", date(2026, 1, 2), 15]]
+            [['=HYPERLINK("https://example.org")', "00123\x00", date(2026, 1, 2), 15]]
         )
         sheet = load_workbook(
             BytesIO(

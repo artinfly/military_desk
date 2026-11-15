@@ -1,8 +1,10 @@
 """Справки о бронировании и редактирование макета без исполнения кода шаблона."""
 
 import re
+from itertools import batched
 
 from django import forms
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import connection, transaction
 from django.shortcuts import get_object_or_404, redirect, render
@@ -12,6 +14,7 @@ from django.views import View
 from apps.core.widgets import use_reference_picker
 from apps.personnel.models import Person
 from apps.references.models import Department
+from apps.references.reservation import vus_code
 
 from .models import DEFAULT_BODY, CertificateTemplate
 from .services.common import day, text, workshop
@@ -31,6 +34,7 @@ FIELDS = (
     "Номер",
     "ПриказНомер",
     "Дата",
+    "Организация",
 )
 PLACEHOLDER = re.compile(r"{{\s*([^{}]+?)\s*}}")
 VIEW_PERMISSIONS = ("personnel.view_person", "military.view_militaryrecord")
@@ -45,24 +49,17 @@ def template_data():
 
 
 def certificate_people():
-    return (
-        Person.objects.filter(
-            dismissal_date__isnull=True,
-            military__is_reserved=True,
-        )
-        .select_related(
-            "department",
-            "military__accounting_group",
-            "military__rank",
-            "military__reserve_composition",
-            "military__speciality",
-        )
-        .order_by("department__number", "last_name", "first_name", "pk")
-    )
+    return Person.objects.select_related(
+        "department",
+        "military__accounting_group",
+        "military__rank",
+        "military__reserve_composition",
+        "military__speciality",
+    ).order_by("department__number", "last_name", "first_name", "pk")
 
 
-def certificate_text(person, body, today):
-    military = person.military
+def certificate_text(person, body, today, organization=""):
+    military = getattr(person, "military", None)
     values = dict(
         zip(
             FIELDS,
@@ -73,14 +70,19 @@ def certificate_text(person, body, today):
                 person.tab_number,
                 person.position,
                 workshop(person),
-                text(military.accounting_group),
-                text(military.rank),
-                text(military.reserve_composition),
-                text(military.speciality),
-                military.document_series,
-                military.document_number,
-                military.reservation_document,
+                text(military and military.accounting_group),
+                text(military and military.rank),
+                text(military and military.reserve_composition),
+                (
+                    (vus_code(military.speciality) or text(military.speciality))
+                    if military and military.speciality
+                    else ""
+                ),
+                military.document_series if military else "",
+                military.document_number if military else "",
+                military.reservation_document if military else "",
                 day(today),
+                organization,
             ),
             strict=True,
         )
@@ -130,9 +132,21 @@ class CertificatesView(View):
         form = CertificateSelectionForm(request.GET or None)
         people = certificate_people()
         if pk is not None:
-            people = [get_object_or_404(people, pk=pk)]
+            person = get_object_or_404(people, pk=pk)
+            military = getattr(person, "military", None)
+            if not (person.is_working and military and military.is_reserved):
+                messages.error(
+                    request,
+                    "Справка о бронировании доступна работающим забронированным сотрудникам.",
+                )
+                return redirect("personnel:detail", pk=pk)
+            people = [person]
         elif request.GET and form.is_valid():
-            people = people.filter(department=form.cleaned_data["department"])
+            people = people.filter(
+                department=form.cleaned_data["department"],
+                dismissal_date__isnull=True,
+                military__is_reserved=True,
+            )
         else:
             return render(
                 request,
@@ -144,15 +158,22 @@ class CertificatesView(View):
                 },
             )
         today = timezone.localdate()
+        certificates = []
+        for person in people:
+            body = certificate_text(person, template.body, today, template.organization)
+            # Строка с табуляцией задаёт левую и правую подписи в одной строке.
+            certificates.append([line.partition("\t") for line in body.splitlines()])
         return render(
             request,
             "reports/certificate_print.html",
             {
                 "page_title": template.name,
                 "template": template,
-                "certificates": [
-                    (p, certificate_text(p, template.body, today)) for p in people
-                ],
+                "person": person if pk is not None else None,
+                "sheets": list(batched(certificates, 2)),
+                "single_certificate": len(certificates) == 1,
+                "show_organization_heading": "Организация"
+                not in PLACEHOLDER.findall(template.body),
             },
         )
 

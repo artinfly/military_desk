@@ -8,13 +8,12 @@
 
 from dataclasses import dataclass, field
 
+from apps.military.account_codes import account_code
 from apps.references import models as ref
 from apps.references.reservation import mark_reservation_flags
 
 from .source import is_deleted, text
 
-# Виды учёта: в старой базе название — это код
-SPECIAL_NAMES = {"X4": "Спец. учёт", "R7": "Команда", "H9": "Общий учёт"}
 # Офицерские звания (как в отчёте численности старой программы)
 OFFICER_RANKS = {
     "Мл. лейтенант", "Младший лейтенант", "Лейтенант", "Ст. лейтенант",
@@ -88,27 +87,41 @@ class References:
             twin(obj.name, [getattr(obj, f) for f in spec.extra.values()]): obj
             for obj in existing
         }
-        mapping, created = {}, 0
+        names = (
+            {
+                account_code(role): label
+                for role, label in (
+                    ("reserved", "Спец. учёт"),
+                    ("team", "Команда"),
+                    ("general", "Общий учёт"),
+                )
+                if account_code(role)
+            }
+            if spec.table == "nsi_specials"
+            else {}
+        )
+        mapping, new = {}, []
         for row in self.tables.get(spec.table, []):
             old_id = row[spec.id]
             code, name = text(old_id, 50), text(row[spec.name], 255)
             if spec.table == "nsi_specials":
                 code = name.upper()
-                name = SPECIAL_NAMES.get(code, name)
+                name = names.get(code, name)
             name = name or f"Без названия ({code})"
             values = {new: text(row.get(old)) for old, new in spec.extra.items()}
             key = twin(name, values.values())
             obj = by_code.get(code) or (by_twin.get(key) if key else None)
             if obj is None:
-                obj = model.objects.create(
+                obj = model(
                     name=name, code=code, is_active=not is_deleted(row), **values
                 )
                 by_code[code] = obj
                 if key:
                     by_twin[key] = obj
-                created += 1
+                new.append(obj)
             mapping[old_id] = obj
-        self.report.count(f"Справочник «{model._meta.verbose_name_plural}»", created)
+        model.objects.bulk_create(new, batch_size=1000)
+        self.report.count(f"Справочник «{model._meta.verbose_name_plural}»", len(new))
         return mapping
 
     def get(self, table, old_id, where=""):

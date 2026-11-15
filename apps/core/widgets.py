@@ -3,16 +3,7 @@
 from django import forms
 from django.urls import reverse
 
-SEARCHABLE_MODELS = {
-    "department",
-    "region",
-    "city",
-    "street",
-    "militaryspeciality",
-    "militarycommissariat",
-    "attributetype",
-    "attributevalue",
-}
+SEARCHABLE_MODELS = {"department", "militaryspeciality"}
 
 
 class ReferenceSelect(forms.Select):

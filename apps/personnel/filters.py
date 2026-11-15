@@ -39,11 +39,7 @@ class PersonFilterForm(forms.Form):
     department = _choice(ref.Department, "Цех")
     commissariat = _choice(ref.MilitaryCommissariat, "Военкомат")
     attribute_value = _choice(ref.AttributeValue, "Доп. атрибут")
-    speciality = forms.CharField(
-        label="ВУС",
-        required=False,
-        widget=forms.TextInput(attrs={"placeholder": "код или название"}),
-    )
+    speciality = _choice(ref.MilitarySpeciality, "ВУС")
     officers = forms.BooleanField(label="Офицеры", required=False)
     reserved = forms.BooleanField(label="Забронированные", required=False)
     svo = forms.BooleanField(label="Участники СВО", required=False)

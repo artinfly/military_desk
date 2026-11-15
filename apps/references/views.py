@@ -128,7 +128,7 @@ class ReferenceChoicesView(ReferenceMixin, View):
         response = JsonResponse(
             {
                 "results": [
-                    {"id": str(obj.pk), "label": str(obj), "code": obj.code}
+                    {"id": str(obj.pk), "label": str(obj)}
                     for obj in page
                 ],
                 "page": page.number,

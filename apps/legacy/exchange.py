@@ -15,6 +15,13 @@ from .report import Report
 
 
 def parse_extended(file):
+    try:
+        return _parse_extended(file)
+    except csv.Error as error:
+        raise ValidationError(f"Не удалось разобрать TSV: {error}.") from error
+
+
+def _parse_extended(file):
     rows = csv.DictReader(
         io.StringIO(decode_upload(file)), delimiter="\t", quoting=csv.QUOTE_NONE
     )
@@ -43,7 +50,7 @@ def parse_extended(file):
     return result
 
 
-def import_extended(rows, actor, checksum, *, dry_run=False):
+def import_extended(rows, actor, checksum, *, dry_run=False, record_batch=True):
     report = Report()
     with transaction.atomic():
         people = {
@@ -57,6 +64,12 @@ def import_extended(rows, actor, checksum, *, dry_run=False):
             [ProfessionCode(code=c) for c in codes], ignore_conflicts=True
         )
         professions = {p.code: p for p in ProfessionCode.objects.filter(code__in=codes)}
+        existing = {
+            person_id: (profession_id, category)
+            for person_id, profession_id, category in PersonnelCode.objects.filter(
+                person_id__in=[person.pk for person in people.values()]
+            ).values_list("person_id", "profession_id", "category")
+        }
         records = [
             PersonnelCode(
                 person=p,
@@ -66,7 +79,13 @@ def import_extended(rows, actor, checksum, *, dry_run=False):
             for tab, p in people.items()
         ]
         PersonnelCode.objects.bulk_create(
-            records,
+            [
+                record
+                for record in records
+                if existing.get(record.person_id)
+                != (record.profession_id, record.category)
+            ],
+            batch_size=1000,
             update_conflicts=True,
             update_fields=("profession", "category"),
             unique_fields=("person",),
@@ -80,13 +99,13 @@ def import_extended(rows, actor, checksum, *, dry_run=False):
         report.count(
             "Записи без ОКПДТР", sum(not code for code, category in rows.values())
         )
-        if not dry_run:
+        if not dry_run and record_batch:
             ImportBatch.objects.create(
                 created_by=actor,
                 kind="extended",
                 checksum=checksum,
                 counts=report.counts,
             )
-        else:
+        if dry_run:
             transaction.set_rollback(True)
     return report

@@ -8,7 +8,10 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import redirect, render
 from django.views import View
 
+from apps.references.models import SpecialAccountType
+
 from . import services
+from .account_codes import account_code, booking_codes
 from .forms import ChangeAccountTypeForm, ReserveForm, UnreserveForm
 
 PERM = "military.change_militaryrecord"
@@ -45,12 +48,17 @@ class OperationsView(View):
         return redirect("military:operations")
 
     def render(self, request, **forms):
+        reserve_form = forms.get("reserve_form") or ReserveForm(prefix="reserve")
+        general = account_code("general")
         context = {
             "page_title": self.page_title,
+            "can_reserve": bool(reserve_form.fields["account_type"].queryset),
+            "can_unreserve": bool(general)
+            and SpecialAccountType.objects.active().filter(code=general).exists(),
             "can_update_dismissed": request.user.has_perms(DISMISSED_PERMISSIONS),
             "account_form": forms.get("account_form") or ChangeAccountTypeForm(),
             "unreserve_form": forms.get("unreserve_form") or UnreserveForm(),
-            "reserve_form": forms.get("reserve_form") or ReserveForm(prefix="reserve"),
+            "reserve_form": reserve_form,
         }
         return render(request, self.template_name, context)
 
@@ -62,7 +70,7 @@ class OperationsView(View):
         count = services.change_account_type(old, new, actor=request.user)
         messages.success(
             request,
-            f"Группа учёта «{old}» → «{new or 'без группы'}»: изменено записей — {count}.",
+            f"Вид учёта «{old}» → «{new or 'без вида учёта'}»: изменено записей — {count}.",
         )
         return redirect("military:operations")
 
@@ -112,6 +120,12 @@ class OperationsView(View):
 
     def reserve(self, request):
         form = ReserveForm(request.POST, request.FILES, prefix="reserve")
+        if not booking_codes():
+            form.add_error(
+                None,
+                "Виды учёта для бронирования не настроены. Обратитесь к администратору.",
+            )
+            return self.render(request, reserve_form=form)
         if form.is_valid():
             try:
                 snils = services.read_snils_file(form.cleaned_data["file"])
@@ -126,6 +140,7 @@ class OperationsView(View):
                     snils,
                     form.cleaned_data["order"],
                     form.cleaned_data["account_type"],
+                    accounting_group=form.cleaned_data["accounting_group"],
                     actor=request.user,
                 )
             except ValidationError as error:

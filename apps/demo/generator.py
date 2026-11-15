@@ -42,11 +42,10 @@ def seed_references():
     """Справочники: создаёт недостающие записи, существующие не трогает."""
     for model_name, names in data.REFERENCES.items():
         model = getattr(ref, model_name)
-        codes = data.REFERENCE_CODES.get(model_name, {})
         for order, name in enumerate(names, 1):
             model.objects.get_or_create(
                 name=name,
-                defaults={"sort_order": order, "code": codes.get(name, str(order))},
+                defaults={"sort_order": order, "code": str(order)},
             )
     ranks = data.REFERENCES["MilitaryRank"]
     officers = ranks[ranks.index(data.OFFICER_RANKS_FROM) :]

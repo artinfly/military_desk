@@ -71,7 +71,7 @@ class RoleAccessTests(TestCase):
         self.client.force_login(make_user("nobody"))
         home = self.client.get(reverse("core:home"))
         self.assertContains(home, "нет роли")
-        self.assertEqual(self.menu(home), ["Главная"])
+        self.assertEqual(self.menu(home), ["Главная", "Инструкция"])
         for url in [
             reverse("personnel:list"),
             reverse("personnel:detail", args=[self.person.pk]),
@@ -87,7 +87,9 @@ class RoleAccessTests(TestCase):
         self.client.force_login(make_user("viewer", VIEWER))
         home = self.client.get(reverse("core:home"))
         self.assertContains(home, "Ваши роли: Просмотр")
-        self.assertEqual(self.menu(home), ["Главная", "Учётные карточки", "Отчёты"])
+        self.assertEqual(
+            self.menu(home), ["Главная", "Инструкция", "Учётные карточки", "Отчёты"]
+        )
         card = self.client.get(
             reverse("personnel:detail", args=[self.person.pk]), {"tab": "military"}
         )

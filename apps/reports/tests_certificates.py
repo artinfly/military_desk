@@ -49,11 +49,33 @@ class CertificatesTests(TestCase):
         self.assertContains(response, "12/26")
         self.person.dismissal_date = date(2026, 1, 1)
         self.person.save()
-        self.assertEqual(
-            self.client.get(
-                reverse("reports:certificate", args=[self.person.pk])
-            ).status_code,
-            404,
+        response = self.client.get(
+            reverse("reports:certificate", args=[self.person.pk])
+        )
+        self.assertRedirects(
+            response, reverse("personnel:detail", args=[self.person.pk])
+        )
+        response = self.client.get(
+            reverse("reports:certificates"), {"department": self.department.pk}
+        )
+        self.assertNotContains(response, 'class="certificate-sheet"')
+
+    def test_card_action_uses_booking_certificate_and_explains_unavailability(self):
+        self.client.force_login(make_user("card-reader", ADMIN))
+        url = reverse("reports:certificate", args=[self.person.pk])
+        detail = reverse("personnel:detail", args=[self.person.pk])
+        self.assertContains(
+            self.client.get(detail), f'href="{url}">Справка о бронировании'
+        )
+        self.assertContains(self.client.get(url), "12/26")
+        person = make_person("202", last_name="Другой")
+        detail = reverse("personnel:detail", args=[person.pk])
+        self.assertContains(
+            self.client.get(detail),
+            'disabled aria-describedby="certificate-unavailable"',
+        )
+        self.assertRedirects(
+            self.client.get(reverse("reports:certificate", args=[person.pk])), detail
         )
 
     def test_edit_requires_admin_and_rejects_unknown_fields(self):

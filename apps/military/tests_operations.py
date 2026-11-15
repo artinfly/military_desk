@@ -2,7 +2,7 @@ from datetime import date
 from io import BytesIO
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import override_settings, TestCase
 from django.urls import reverse
 from openpyxl import Workbook
 
@@ -15,22 +15,31 @@ from . import services
 from .models import MilitaryRecord, ReservationDismissal
 
 
-def xlsx_file(values, name="snils.xlsx"):
+def xlsx_file(values, name="snils.xlsx", *, with_names=False):
     book = Workbook()
     sheet = book.active
-    sheet.append(["СНИЛС"])
+    sheet.append(["ФИО", "СНИЛС"] if with_names else ["СНИЛС"])
     for value in values:
-        sheet.append([value])
+        sheet.append(["Проверочный сотрудник", value] if with_names else [value])
     content = BytesIO()
     book.save(content)
     return SimpleUploadedFile(name, content.getvalue())
 
 
+@override_settings(
+    MILITARY_ACCOUNT_CODES={
+        "reserved": "DEMO-BOOK",
+        "team": "DEMO-TEAM",
+        "general": "DEMO-GENERAL",
+    }
+)
 class OperationServicesTests(TestCase):
     def setUp(self):
-        self.team = ref.SpecialAccountType.objects.create(name="Команда", code="R7")
+        self.team = ref.SpecialAccountType.objects.create(
+            name="Команда", code="DEMO-TEAM"
+        )
         self.general = ref.SpecialAccountType.objects.create(
-            name="Общий учёт", code="H9"
+            name="Общий учёт", code="DEMO-GENERAL"
         )
 
     def record(self, tab, **kwargs):
@@ -109,6 +118,13 @@ class OperationServicesTests(TestCase):
         self.assertTrue(dismissed.is_reserved)
 
 
+@override_settings(
+    MILITARY_ACCOUNT_CODES={
+        "reserved": "DEMO-BOOK",
+        "team": "DEMO-TEAM",
+        "general": "DEMO-GENERAL",
+    }
+)
 class OperationsViewTests(TestCase):
     url = reverse("military:operations")
 
@@ -125,7 +141,7 @@ class OperationsViewTests(TestCase):
         response = self.client.post(self.url, {"action": "dismissed"}, follow=True)
         self.assertContains(response, "Спец. уволенные обновлены")
 
-        ref.SpecialAccountType.objects.create(name="Общий учёт", code="H9")
+        ref.SpecialAccountType.objects.create(name="Общий учёт", code="DEMO-GENERAL")
         person = make_person("1", snils="123-456-789 01")
         MilitaryRecord.objects.create(person=person, is_reserved=True)
         response = self.client.post(
@@ -133,7 +149,7 @@ class OperationsViewTests(TestCase):
             {
                 "action": "unreserve",
                 "order": "77-р",
-                "file": xlsx_file(["12345678901", "99999999999"]),
+                "file": xlsx_file(["12345678901", "99999999999"], with_names=True),
             },
             follow=True,
         )

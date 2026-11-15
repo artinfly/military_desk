@@ -43,3 +43,12 @@ class MenuTests(TestCase):
         response = self.client.get(reverse("core:home"))
         self.assertContains(response, admin_link)
         self.assertNotIn("Админка", self.menu_labels(response))
+
+    def test_instruction_is_available_after_login(self):
+        url = reverse("core:help")
+        self.assertEqual(self.client.get(url).status_code, 302)
+        self.client.force_login(User.objects.create_user(username="help-reader"))
+        response = self.client.get(url)
+        self.assertContains(response, 'href="#exchange"')
+        self.assertContains(response, 'id="exchange"')
+        self.assertContains(response, "help/cards.webp")

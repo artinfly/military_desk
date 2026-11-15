@@ -1,14 +1,43 @@
-@page { size: A4; margin: 20mm; }
+@page { size: A4 landscape; margin: 8mm; }
+
 .print-page { background: #e9edf2; padding: 24px; }
-.print-toolbar { display: flex; gap: 12px; justify-content: center; margin-bottom: 24px; }
-.certificate-sheet { background: white; color: #111; max-width: 170mm; min-height: 240mm; padding: 20mm; margin: 0 auto 24px; box-sizing: content-box; box-shadow: 0 4px 24px #25344a18; }
-.certificate-sheet h1 { text-align: center; margin: 24px 0 36px; font-size: 22px; }
-.certificate-organization { text-align: center; white-space: pre-wrap; }
-.certificate-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.7; }
-@media print {
-    .print-page { padding: 0; background: white; }
-    .print-toolbar { display: none; }
-    .certificate-sheet { max-width: none; min-height: 0; padding: 0; margin: 0; box-shadow: none; break-after: page; }
-    .certificate-sheet:last-child { break-after: auto; }
+.print-toolbar { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 24px; }
+.print-sheet {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 297mm;
+    margin: 0 auto 24px;
+    background: white;
+    padding: 8mm;
+    box-shadow: 0 4px 24px #25344a18;
 }
-@media screen and (max-width: 850px) { .certificate-sheet { max-width: 100%; min-height: 0; padding: 24px; box-sizing: border-box; } }
+.certificate-sheet {
+    min-height: 193mm;
+    padding: 38mm 4mm 4mm;
+    color: #111;
+    font: 11pt/1.23 Arial, sans-serif;
+    overflow-wrap: anywhere;
+}
+.certificate-sheet h1 { text-align: center; font: inherit; margin: 0 0 3mm; }
+.certificate-organization { text-align: center; white-space: pre-wrap; margin-bottom: 3mm; }
+.certificate-body p { margin: 0; white-space: pre-wrap; text-align: justify; }
+.certificate-space { height: 4mm; }
+.certificate-signature {
+    display: flex;
+    justify-content: space-between;
+    gap: 4mm;
+    margin-top: 10mm;
+}
+@media print {
+    .print-page { min-width: 0; padding: 0; background: white; }
+    .print-toolbar { display: none; }
+    .print-sheet { margin: 0; padding: 0; box-shadow: none; break-after: page; }
+    .print-sheet:last-child { break-after: auto; }
+    .certificate-sheet { break-inside: avoid; }
+    .print-right .certificate-sheet { grid-column: 2; }
+}
+@media screen and (max-width: 850px) {
+    .print-sheet { grid-template-columns: minmax(0, 1fr); padding: 0; }
+    .certificate-sheet { min-height: 0; padding: 24px; }
+    .certificate-sheet + .certificate-sheet { border-top: 1px solid #e9edf2; }
+}

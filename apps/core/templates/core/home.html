@@ -18,7 +18,7 @@
 <div class="figures">
     {% for figure in figures %}
     <div class="figure">
-        <div class="figure-value">{{ figure.value }}</div>
+        <div class="figure-value">{{ figure.value|default_if_none:"—" }}</div>
         <div class="figure-title">{{ figure.title }}</div>
         {% if figure.details %}
         <div class="figure-details muted">

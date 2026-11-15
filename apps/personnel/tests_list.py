@@ -23,7 +23,7 @@ class SearchTests(TestCase):
     def setUpTestData(cls):
         cls.duty = ref.MilitaryDuty.objects.create(name="Военнообязанный")
         cls.conscript = ref.MilitaryDuty.objects.create(name="Призывник")
-        cls.team = ref.SpecialAccountType.objects.create(name="Команда", code="R7")
+        cls.team = ref.SpecialAccountType.objects.create(name="Команда", code="DEMO-TEAM")
         cls.dep10 = ref.Department.objects.create(name="Механический цех", number="10")
         cls.dep20 = ref.Department.objects.create(name="Сборочный цех", number="20")
         cls.comm = ref.MilitaryCommissariat.objects.create(name="Военкомат г. Энска")
@@ -127,8 +127,8 @@ class PersonListViewTests(TestCase):
             person = make_person(f"2{n:03d}", last_name=f"Фамилия{n:02d}")
             MilitaryRecord.objects.create(person=person)
         url = reverse("personnel:list")
-        with self.assertNumQueries(8):
-            # Сессия, пользователь, 2 — права (кнопка «Добавить»), счётчик, 2 малых справочника, страница —
+        with self.assertNumQueries(10):
+            # Сессия, пользователь, 2 — права (кнопка «Добавить»), счётчик, 4 обычных справочника, страница —
             # число запросов не зависит от количества карточек
             response = self.client.get(url, {"sort": "-tab_number"})
         self.assertEqual(response.status_code, 200)
@@ -156,3 +156,29 @@ class PersonListViewTests(TestCase):
             if i["active"]
         ]
         self.assertEqual(active, ["Учётные карточки"])
+
+
+class SingleFilterTests(TestCase):
+    def test_selection_survives_render_and_export(self):
+        from io import BytesIO
+        from openpyxl import load_workbook
+        from apps.accounts.roles import VIEWER
+        from apps.accounts.testing import make_user
+
+        self.client.force_login(make_user("filter-viewer", VIEWER))
+        first = ref.Department.objects.create(name="Первый цех")
+        second = ref.Department.objects.create(name="Второй цех")
+        make_person("701", department=first)
+        make_person("702", department=second)
+        make_person("703")
+        params = {"department": first.pk}
+        page = self.client.get(reverse("personnel:list"), params)
+        self.assertEqual(page.context["paginator"].count, 1)
+        self.assertContains(page, first.name)
+        book = load_workbook(
+            BytesIO(self.client.get(reverse("reports:filter"), params).content)
+        )
+        self.assertEqual(
+            {row[0] for row in book.active.values if row[0] in {"701", "702", "703"}},
+            {"701"},
+        )

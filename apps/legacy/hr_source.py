@@ -4,12 +4,15 @@ import csv
 import io
 from collections import defaultdict
 from datetime import datetime
+from functools import lru_cache
 
 from django.core.exceptions import ValidationError
 
 from .references import REF_TABLES
 
 MAX_FILE_SIZE = 200 * 1024 * 1024
+HR_COLUMNS = 286
+BK_COUNT_LABEL = "Кол-во работающих БК"
 
 
 def decode_upload(file):
@@ -21,10 +24,22 @@ def decode_upload(file):
     try:
         return raw.decode("utf-8-sig")
     except UnicodeDecodeError:
-        return raw.decode("cp1251")
+        try:
+            return raw.decode("cp1251")
+        except UnicodeDecodeError as error:
+            raise ValidationError(
+                "Файл должен быть в UTF-8 или Windows-1251."
+            ) from error
 
 
 def parse_hr(file):
+    try:
+        return _parse_hr(file)
+    except csv.Error as error:
+        raise ValidationError(f"Не удалось разобрать TSV: {error}.") from error
+
+
+def _parse_hr(file):
     source = csv.reader(
         io.StringIO(decode_upload(file)), delimiter="\t", quoting=csv.QUOTE_NONE
     )
@@ -32,6 +47,7 @@ def parse_hr(file):
     tables = defaultdict(dict)
     specs = {s.table: s for s in REF_TABLES}
     replaced = defaultdict(int)
+    bk_count = None
 
     def put(table, key, data):
         row = defaultdict(lambda: None, data)
@@ -49,11 +65,36 @@ def parse_hr(file):
             replaced[table] += 1
         tables[table][str(key)] = row
 
+    @lru_cache(maxsize=16384)
+    def parse_date(value):
+        return datetime.strptime(value, "%d.%m.%Y").date()
+
     for line, fields in enumerate(source, 2):
-        if not any(fields):
+        if not any(field.strip() for field in fields):
             continue
-        if len(fields) < 286:
-            raise ValidationError(f"Строка {line}: ожидается не менее 286 колонок TSV.")
+        if len(fields) < HR_COLUMNS:
+            raise ValidationError(
+                f"Строка {line}: ожидается не менее {HR_COLUMNS} колонок TSV."
+            )
+        # Первые 286 полей принадлежат карточке. Хвостовые пустые поля
+        # пропускаем, чтобы не спутать показатель с реквизитами карточки.
+        tail = next(
+            (field.strip() for field in reversed(fields[HR_COLUMNS:]) if field.strip()),
+            "",
+        )
+        if tail:
+            if not tail.isascii() or not tail.isdecimal() or len(tail) > 10:
+                raise ValidationError(
+                    f"Строка {line}: в последней заполненной колонке ожидается целое число БК."
+                )
+            value_bk = int(tail)
+            if bk_count is not None and value_bk != bk_count:
+                raise ValidationError(
+                    f"Строка {line}: в выгрузке указаны разные значения численности БК."
+                )
+            bk_count = value_bk
+        if not any(field.strip() for field in fields[:HR_COLUMNS]):
+            continue  # Итог может стоять в последней строке отдельно от карточек.
 
         def value(index):
             return fields[index].strip()
@@ -73,7 +114,7 @@ def parse_hr(file):
             if not v or v in ("00.00.0000", "01.01.0001"):
                 return None
             try:
-                return datetime.strptime(v, "%d.%m.%Y").date()
+                return parse_date(v)
             except ValueError as error:
                 raise ValidationError(
                     f"Строка {line}, колонка {index}: некорректная дата."
@@ -101,8 +142,9 @@ def parse_hr(file):
             raise ValidationError(
                 f"Строка {line}: нет идентификатора карточки или табельного номера."
             )
+        birth_date = date_(10)
         if (
-            not date_(10)
+            not birth_date
             or not value(3)
             or not value(4)
             or value(8).upper() not in ("М", "Ж", "M", "F")
@@ -118,7 +160,7 @@ def parse_hr(file):
                 name=value(4),
                 patronymic=value(5),
                 gender=value(8),
-                birth_date=date_(10),
+                birth_date=birth_date,
                 employment_date=date_(11),
                 dismissal_date=date_(12),
                 birth_place=value(28),
@@ -302,4 +344,6 @@ def parse_hr(file):
         raise ValidationError("В файле нет учётных карточек.")
     result = {table: list(rows.values()) for table, rows in tables.items()}
     result["__diagnostics__"] = dict(replaced)
+    if bk_count is not None:
+        result["__bk_count__"] = bk_count
     return result

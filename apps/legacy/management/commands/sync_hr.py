@@ -9,6 +9,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.legacy.exchange import import_extended, parse_extended
+from apps.legacy.hr_archive import import_archive
 from apps.legacy.hr_importer import import_hr
 from apps.legacy.hr_source import parse_hr
 from apps.legacy.permissions import IMPORT_PERMISSIONS
@@ -18,6 +19,9 @@ class Command(BaseCommand):
     help = "Загрузить vus.csv и/или vus_ext.csv с журналом и пробным режимом"
 
     def add_arguments(self, parser):
+        parser.add_argument(
+            "--archive", help="ZIP с vus.csv и необязательным vus_ext.csv"
+        )
         parser.add_argument("--file", help="кадровая выгрузка vus.csv")
         parser.add_argument("--extended", help="дополнительная выгрузка vus_ext.csv")
         parser.add_argument(
@@ -30,8 +34,11 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        if not options["file"] and not options["extended"]:
-            raise CommandError("Укажите --file и/или --extended")
+        archive = options["archive"]
+        if archive and (options["file"] or options["extended"]):
+            raise CommandError("Используйте --archive отдельно от --file и --extended.")
+        if not archive and not options["file"] and not options["extended"]:
+            raise CommandError("Укажите --archive или путь к кадровому файлу.")
         actor = (
             get_user_model()
             .objects.filter(username=options["user"], is_active=True)
@@ -41,24 +48,14 @@ class Command(BaseCommand):
             raise CommandError(
                 "Не найден активный пользователь с правами кадровой загрузки"
             )
-        inputs = []
         try:
-            for option, parse, apply in (
-                ("file", parse_hr, import_hr),
-                ("extended", parse_extended, import_extended),
-            ):
-                if options[option]:
-                    with Path(options[option]).open("rb") as file:
-                        checksum = hashlib.file_digest(file, "sha256").hexdigest()
-                        file.seek(0)
-                        inputs.append((parse(file), apply, checksum))
-            with transaction.atomic():
-                for rows, apply, checksum in inputs:
-                    report = apply(rows, actor, checksum)
-                    for line in report.lines():
-                        self.stdout.write(line)
-                if options["dry_run"]:
-                    transaction.set_rollback(True)
+            if archive:
+                with Path(archive).open("rb") as file:
+                    report = import_archive(file, actor, dry_run=options["dry_run"])
+                for line in report.lines():
+                    self.stdout.write(line)
+            else:
+                self.import_files(options, actor)
         except (OSError, ValidationError) as error:
             raise CommandError(str(error)) from error
         self.stdout.write(
@@ -68,3 +65,22 @@ class Command(BaseCommand):
                 else "Кадровые данные загружены."
             )
         )
+
+    def import_files(self, options, actor):
+        inputs = []
+        for option, parse, apply in (
+            ("file", parse_hr, import_hr),
+            ("extended", parse_extended, import_extended),
+        ):
+            if options[option]:
+                with Path(options[option]).open("rb") as file:
+                    checksum = hashlib.file_digest(file, "sha256").hexdigest()
+                    file.seek(0)
+                    inputs.append((parse(file), apply, checksum))
+        with transaction.atomic():
+            for rows, apply, checksum in inputs:
+                report = apply(rows, actor, checksum)
+                for line in report.lines():
+                    self.stdout.write(line)
+            if options["dry_run"]:
+                transaction.set_rollback(True)

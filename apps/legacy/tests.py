@@ -3,7 +3,7 @@ from io import StringIO
 from unittest import mock
 
 from django.core.management import CommandError, call_command
-from django.test import SimpleTestCase, TestCase
+from django.test import override_settings, SimpleTestCase, TestCase
 from psycopg.postgres import types
 from psycopg.types.datetime import DateLoader, TimestampLoader
 
@@ -89,7 +89,9 @@ def tables(**extra):
     result = {
         "nsi_military_duties": nsi("mil_duty_id", "military_duty", "Военнообязанный"),
         "nsi_military_ranks": nsi("mil_rank_id", "military_rank", "Рядовой", "Капитан"),
-        "nsi_specials": nsi("special_id", "special", "X4", "R7", "H9"),
+        "nsi_specials": nsi(
+            "special_id", "special", "DEMO-BOOK", "DEMO-TEAM", "DEMO-GENERAL"
+        ),
         "nsi_mil_registration_docs": nsi(
             "mil_reg_doc_id",
             "mil_reg_document",
@@ -124,12 +126,23 @@ def tables(**extra):
     return result
 
 
+@override_settings(
+    MILITARY_ACCOUNT_CODES={
+        "reserved": "DEMO-BOOK",
+        "team": "DEMO-TEAM",
+        "general": "DEMO-GENERAL",
+    }
+)
 class ReferencesTests(TestCase):
     def test_reference_mapping(self):
         LegacyImporter(tables()).run()
         self.assertEqual(
             set(ref.SpecialAccountType.objects.values_list("code", "name")),
-            {("X4", "Спец. учёт"), ("R7", "Команда"), ("H9", "Общий учёт")},
+            {
+                ("DEMO-BOOK", "Спец. учёт"),
+                ("DEMO-TEAM", "Команда"),
+                ("DEMO-GENERAL", "Общий учёт"),
+            },
         )
         self.assertEqual(ref.Department.objects.count(), 1)  # повтор цеха — одна запись
         self.assertEqual(ref.City.objects.count(), 2)  # одноимённые города — разные
@@ -170,6 +183,13 @@ class SourceTests(SimpleTestCase):
         self.assertEqual(stamp_loader.load(b"2020-05-06 10:00:00").year, 2020)
 
 
+@override_settings(
+    MILITARY_ACCOUNT_CODES={
+        "reserved": "DEMO-BOOK",
+        "team": "DEMO-TEAM",
+        "general": "DEMO-GENERAL",
+    }
+)
 class PeopleTests(TestCase):
     def run_import(self, **extra):
         return LegacyImporter(tables(**extra)).run()
@@ -302,7 +322,7 @@ class PeopleTests(TestCase):
         )
         record = MilitaryRecord.objects.get()
         self.assertEqual(str(record.rank), "Капитан")
-        self.assertEqual(record.special_account_type.code, "X4")
+        self.assertEqual(record.special_account_type.code, "DEMO-BOOK")
         self.assertTrue(record.is_reserved)
         self.assertEqual(record.person.nationality, "русский")
         registration = CommissariatRegistration.objects.get()
@@ -311,6 +331,13 @@ class PeopleTests(TestCase):
         self.assertEqual(record.person.position, "Токарь")
 
 
+@override_settings(
+    MILITARY_ACCOUNT_CODES={
+        "reserved": "DEMO-BOOK",
+        "team": "DEMO-TEAM",
+        "general": "DEMO-GENERAL",
+    }
+)
 class CommandTests(TestCase):
     def test_dry_run_and_refusal(self):
         data = tables(account_cards=[card(1, "1001")])

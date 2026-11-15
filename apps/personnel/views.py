@@ -247,7 +247,12 @@ class PersonFormView(View):
     def get(self, request, *args, **kwargs):
         return self.render(PersonForm(instance=self.person))
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
+        if self.person is not None:
+            self.person = get_object_or_404(
+                Person.objects.select_for_update(), pk=self.person.pk
+            )
         form = PersonForm(request.POST, instance=self.person)
         if not form.is_valid():
             return self.render(form)
@@ -279,7 +284,11 @@ class PersonDeleteView(View):
             },
         )
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
+        self.person = get_object_or_404(
+            Person.objects.select_for_update(), pk=self.person.pk
+        )
         name = str(self.person)
         self.person.delete()
         messages.success(request, f"Карточка «{name}» удалена")
@@ -331,11 +340,17 @@ class SectionFormView(View):
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):
-        self.person = Person.objects.select_for_update().get(pk=self.person.pk)
+        self.person = get_object_or_404(
+            Person.objects.select_for_update(), pk=self.person.pk
+        )
         if self.section.single:
             self.item = self.section.model.objects.filter(person=self.person).first()
             require_perm(
                 request.user, self.section.perm("change" if self.item else "add")
+            )
+        elif self.item:
+            self.item = get_object_or_404(
+                self.section.model, pk=self.item.pk, person=self.person
             )
         form = self.section.form_class()(request.POST, instance=self.item)
         if not form.is_valid():
@@ -374,7 +389,14 @@ class SectionDeleteView(View):
             },
         )
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
+        self.person = get_object_or_404(
+            Person.objects.select_for_update(), pk=self.person.pk
+        )
+        self.item = get_object_or_404(
+            self.section.model, pk=self.item.pk, person=self.person
+        )
         try:
             self.item.delete()
         except ProtectedError:

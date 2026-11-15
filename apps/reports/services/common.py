@@ -19,6 +19,7 @@ def assignment_order():
     )
 
 
+from apps.military.account_codes import account_code
 from apps.military.models import CommissariatRegistration
 from apps.personnel.models import (
     Address,
@@ -31,11 +32,6 @@ from apps.personnel.models import (
 # Военная обязанность (справочник «Военная обязанность»)
 LIABLE = "Военнообязанный"
 CONSCRIPT = "Призывник"
-
-# Коды видов учёта (справочник «Виды специального учёта»)
-RESERVED = "X4"  # спецучёт — забронирован
-TEAM = "R7"  # команда
-GENERAL = "H9"  # общий учёт
 
 # Вид приказа последнего назначения у внешних совместителей — их не бронируют
 EXTERNAL_PART_TIME = "по совм. внеш."
@@ -58,9 +54,9 @@ IS_LIABLE = Q(military__duty__name=LIABLE)
 IS_CONSCRIPT = Q(military__duty__name=CONSCRIPT)
 
 
-def account(code):
-    """Условие «вид учёта с кодом code» (X4, R7, H9)."""
-    return Q(military__special_account_type__code=code)
+def account(role):
+    code = account_code(role)
+    return Q(military__special_account_type__code=code) if code else Q(pk__in=[])
 
 
 def is_driver():
@@ -90,9 +86,9 @@ def without_external_part_timers(people):
     )
 
 
-def with_card_data(people):
+def with_card_data(people, *, full=True):
     """Всё для строк отчётов одной выборкой — без запроса на каждого человека."""
-    return people.select_related(
+    people = people.select_related(
         "department",
         "military__duty",
         "military__rank",
@@ -110,6 +106,10 @@ def with_card_data(people):
             "commissariat_history",
             CommissariatRegistration.objects.select_related("commissariat"),
         ),
+    )
+    if not full:
+        return people
+    return people.prefetch_related(
         Prefetch(
             "addresses",
             Address.objects.select_related(

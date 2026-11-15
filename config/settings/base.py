@@ -38,6 +38,15 @@ def env_list(name, default=""):
 
 SECRET_KEY = env("SECRET_KEY")
 
+# Значения относятся к конкретной установке и хранятся вне репозитория.
+MILITARY_ACCOUNT_CODES = {
+    role: env(f"MILITARY_ACCOUNT_{role.upper()}_CODE", "").strip().upper()
+    for role in ("reserved", "team", "general")
+}
+_configured_codes = [code for code in MILITARY_ACCOUNT_CODES.values() if code]
+if len(_configured_codes) != len(set(_configured_codes)):
+    raise ImproperlyConfigured("Укажите разные коды для видов учёта.")
+
 
 # --- Приложения ---
 

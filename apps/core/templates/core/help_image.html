@@ -1,0 +1,9 @@
+{% load static %}
+{% with path="help/"|add:image %}
+<figure class="help-figure">
+    <a href="{% static path %}" target="_blank" rel="noopener">
+        <img src="{% static path %}" alt="{{ caption }}" loading="lazy">
+    </a>
+    <figcaption>{{ caption }}</figcaption>
+</figure>
+{% endwith %}

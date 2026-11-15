@@ -1,12 +1,13 @@
 """Отчёты в Excel: страница «Отчёты», скачивание из реестра и «Отчёт по фильтру»."""
 
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views import View
 
+from apps.military.account_codes import require_account_codes
 from apps.personnel.filters import PersonFilterForm
 from apps.personnel.services import search_people, sort_people
 
@@ -64,6 +65,12 @@ class ReportDownloadView(View):
                 request, " ".join(form.errors.get("__all__", ["Неверный период."]))
             )
             return redirect("reports:list")
+        if slug in ("vus", "hired"):
+            try:
+                require_account_codes()
+            except ValidationError as error:
+                messages.error(request, error.messages[0])
+                return redirect("reports:list")
         content = build_sheets(report.build(form.cleaned_data))
         today = timezone.localdate().strftime("%d.%m.%Y")
         return xlsx_response(content, f"{report.title} {today}.xlsx")

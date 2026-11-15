@@ -56,19 +56,24 @@ def search_people(filters, queryset=None):
     exact = {
         "duty": "military__duty",
         "account_type": "military__special_account_type",
-        "department": "department",
-        "commissariat": "military__commissariat",
     }
     for key, lookup in exact.items():
         if filters.get(key):
             people = people.filter(**{lookup: filters[key]})
 
+    if filters.get("department"):
+        people = people.filter(department=filters["department"])
+    if filters.get("commissariat"):
+        people = people.filter(military__commissariat=filters["commissariat"])
     if filters.get("attribute_value"):
         people = people.filter(attributes__value=filters["attribute_value"]).distinct()
 
-    speciality = (filters.get("speciality") or "").strip()
-    if speciality:
-        people = people.filter(military__speciality__name__icontains=speciality)
+    speciality = filters.get("speciality")
+    if isinstance(speciality, str):
+        if speciality := speciality.strip():
+            people = people.filter(military__speciality__name__icontains=speciality)
+    elif speciality:
+        people = people.filter(military__speciality=speciality)
 
     if filters.get("officers"):
         people = people.filter(military__rank__is_officer=True)

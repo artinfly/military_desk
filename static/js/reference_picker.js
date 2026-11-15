@@ -12,6 +12,14 @@
     const next = document.getElementById("reference-picker-next");
     let picker, page = 1, controller, serial = 0, opener;
 
+    function display(target, label, selected) {
+        const value = target.querySelector(".reference-picker-value");
+        value.textContent = label;
+        value.title = label;
+        const clear = target.querySelector(".reference-picker-clear");
+        if (clear) clear.hidden = !selected;
+    }
+
     async function load(number) {
         controller?.abort();
         controller = new AbortController();
@@ -37,11 +45,9 @@
             next.disabled = !data.has_next;
             for (const item of data.results) {
                 const row = document.createElement("tr");
-                for (const text of [item.label, item.code || "—"]) {
-                    const cell = document.createElement("td");
-                    cell.textContent = text;
-                    row.append(cell);
-                }
+                const label = document.createElement("td");
+                label.textContent = item.label;
+                row.append(label);
                 const cell = document.createElement("td");
                 const choose = document.createElement("button");
                 choose.type = "button";
@@ -51,7 +57,7 @@
                 choose.addEventListener("click", () => {
                     const field = target.querySelector('input[type="hidden"]');
                     field.value = item.id;
-                    target.querySelector(".reference-picker-value").value = item.label;
+                    display(target, item.label, true);
                     field.dispatchEvent(new Event("change", {bubbles: true}));
                     dialog.close();
                 });
@@ -71,7 +77,8 @@
             const target = clear.closest(".reference-picker");
             const field = target.querySelector('input[type="hidden"]');
             field.value = "";
-            target.querySelector(".reference-picker-value").value = target.dataset.pickerEmptyLabel;
+            display(target, target.dataset.pickerEmptyLabel, false);
+            target.querySelector(".reference-picker-open").focus();
             field.dispatchEvent(new Event("change", {bubbles: true}));
             return;
         }

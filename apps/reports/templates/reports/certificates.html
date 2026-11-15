@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="toolbar"><p class="muted">Справки для работающих забронированных сотрудников. Отдельная справка доступна из карточки.</p>
+<div class="toolbar"><p class="muted">Справки по цеху формируются для работающих забронированных сотрудников. Чтобы сформировать справку для одного сотрудника, откройте его карточку.</p>
 {% if can_edit %}<a class="btn" href="{% url 'reports:certificate_template' %}">Изменить шаблон</a>{% endif %}</div>
 <section class="panel form-panel"><h2>Сформировать по цеху</h2>
 <form method="get">{% include "includes/form_fields.html" %}<button class="btn btn-primary" type="submit">Сформировать справки</button></form>

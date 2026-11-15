@@ -2,11 +2,11 @@
 {% if is_paginated %}
 <nav class="pagination">
     {% if page_obj.has_previous %}
-    <a class="btn" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">← Назад</a>
+    <a class="btn" href="{% querystring page=page_obj.previous_page_number %}">← Назад</a>
     {% endif %}
     <span class="muted">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }} · всего {{ page_obj.paginator.count }}</span>
     {% if page_obj.has_next %}
-    <a class="btn" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Вперёд →</a>
+    <a class="btn" href="{% querystring page=page_obj.next_page_number %}">Вперёд →</a>
     {% endif %}
 </nav>
 {% endif %}

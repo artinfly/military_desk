@@ -2,12 +2,14 @@
 
 from django.core.exceptions import ValidationError
 from django.db import connection, transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.military.models import MilitaryRecord
 from apps.military.services import update_reserved_dismissed
 from apps.personnel.models import Person
 
+from .hr_source import BK_COUNT_LABEL
 from .importer import LegacyImporter, remember_sources
 from .models import ImportBatch, SourceRow
 
@@ -72,13 +74,20 @@ class HRImporter(LegacyImporter):
                 }
             ).values_list("key", "target_id")
         )
-        existing = {o.pk: o for o in model.objects.filter(pk__in=sources.values())}
         if model is Person:
-            by_tab = {
-                o.tab_number: o
-                for o in Person.objects.select_for_update().order_by("pk")
+            existing = {
+                person.pk: person
+                for person in Person.objects.filter(
+                    Q(pk__in=sources.values())
+                    | Q(tab_number__in=[obj.tab_number for obj in objects])
+                )
+                .order_by("pk")
+                .select_for_update()
             }
-        elif model is MilitaryRecord:
+            by_tab = {person.tab_number: person for person in existing.values()}
+        else:
+            existing = {o.pk: o for o in model.objects.filter(pk__in=sources.values())}
+        if model is MilitaryRecord:
             by_person = {
                 o.person_id: o
                 for o in model.objects.filter(
@@ -86,7 +95,16 @@ class HRImporter(LegacyImporter):
                 )
             }
         created = updated = unchanged = 0
-        new_objects, changed_objects, updated_fields = [], [], set()
+        new_objects, changed_objects, changed_links, updated_fields = [], [], [], set()
+        base_fields = [
+            f
+            for f in model._meta.concrete_fields
+            if not f.primary_key
+            and f.name not in ("created_at", "updated_at", "updated_by", "person")
+            and f.name not in PRESERVED_FIELDS.get(model._meta.model_name, set())
+            and (model is not Person or f.name in PERSON_FIELDS)
+        ]
+        timestamp = timezone.now()
         for obj in objects:
             marker = getattr(obj, "_legacy_source", None)
             old = existing.get(sources.get(marker[1])) if marker else None
@@ -103,22 +121,9 @@ class HRImporter(LegacyImporter):
                 raise ValidationError(
                     "Исходная запись раздела связана с другой карточкой."
                 )
-            fields = [
-                f
-                for f in model._meta.concrete_fields
-                if not f.primary_key
-                and f.name not in ("created_at", "updated_at", "updated_by", "person")
-            ]
-            if model is Person:
-                fields = [f for f in fields if f.name in PERSON_FIELDS]
-                if marker and marker[1] not in self.personal_ids:
-                    fields = [f for f in fields if f.name not in ("inn", "snils")]
-            else:
-                fields = [
-                    f
-                    for f in fields
-                    if f.name not in PRESERVED_FIELDS.get(model._meta.model_name, set())
-                ]
+            fields = base_fields
+            if model is Person and marker and marker[1] not in self.personal_ids:
+                fields = [f for f in fields if f.name not in ("inn", "snils")]
             if model is MilitaryRecord:
                 protected = {
                     "is_reserved",
@@ -143,7 +148,7 @@ class HRImporter(LegacyImporter):
                     setattr(old, f.attname, getattr(obj, f.attname))
                 if changed:
                     if hasattr(old, "updated_at"):
-                        old.updated_at = timezone.now()
+                        old.updated_at = timestamp
                         changed.append("updated_at")
                     changed_objects.append(old)
                     updated_fields.update(changed)
@@ -164,6 +169,8 @@ class HRImporter(LegacyImporter):
                 changed = True
                 if model is Person:
                     by_tab[obj.tab_number] = obj
+            if marker and (not old or sources.get(marker[1]) != obj.pk):
+                changed_links.append(obj)
             if changed and obj.pk:
                 self.changed_ids.add(obj.pk if model is Person else obj.person_id)
         model.objects.bulk_create(new_objects, batch_size=1000)
@@ -173,18 +180,20 @@ class HRImporter(LegacyImporter):
             )
         for obj in new_objects:
             self.changed_ids.add(obj.pk if model is Person else obj.person_id)
-        remember_sources(objects)
+        remember_sources(changed_links)
         self.report.count(f"{what}: добавлено", created)
         self.report.count(f"{what}: обновлено", updated)
         self.report.count(f"{what}: без изменений", unchanged)
 
 
-def import_hr(tables, actor, checksum, *, dry_run=False):
+def import_hr(tables, actor, checksum, *, dry_run=False, record_batch=True):
     with transaction.atomic():
         with connection.cursor() as cursor:
             cursor.execute("SELECT pg_advisory_xact_lock(486174, 1)")
         importer = HRImporter(tables, actor)
         report = importer.run()
+        if "__bk_count__" in tables:
+            report.count(BK_COUNT_LABEL, tables["__bk_count__"])
         for table, count in tables.get("__diagnostics__", {}).items():
             report.problem(
                 f"{table}: повторные значения исходных записей — {count}; использованы последние строки файла."
@@ -194,10 +203,10 @@ def import_hr(tables, actor, checksum, *, dry_run=False):
         Person.objects.filter(pk__in=importer.changed_ids).update(
             updated_by=actor, updated_at=timezone.now()
         )
-        if not dry_run:
+        if not dry_run and record_batch:
             ImportBatch.objects.create(
                 created_by=actor, kind="hr", checksum=checksum, counts=report.counts
             )
-        else:
+        if dry_run:
             transaction.set_rollback(True)
     return report

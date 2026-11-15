@@ -13,11 +13,8 @@ from apps.personnel.models import Person, Relative
 
 from .common import (
     EXCLUDED_HIRE_SOURCE,
-    GENERAL,
     IS_CONSCRIPT,
     IS_LIABLE,
-    RESERVED,
-    TEAM,
     account,
     age,
     commissariat,
@@ -96,7 +93,8 @@ def card_row(person):
 
 def _rows(people):
     return [
-        card_row(p) for p in with_card_data(people.order_by("last_name", "first_name"))
+        card_row(p)
+        for p in with_card_data(people.order_by("last_name", "first_name"), full=False)
     ]
 
 
@@ -114,23 +112,29 @@ def reservation_form(params):
     Приложение 1 — ВУС из перечня (флажок у ВУС), приложение 2 — люди с документом,
     отмеченным «Отдельно в приложении 2» (их нет в форме и приложении 1).
     """
-    people = reservation_people()
-    separate = Q(military__document_type__in_reservation_appendix=True)
-    main = people.exclude(separate)
+    people = with_card_data(
+        reservation_people().order_by("last_name", "first_name"), full=False
+    )
+    main, appendix_one, appendix_two = [], [], []
+    for person in people:
+        record = person.military
+        row = card_row(person)
+        if record.document_type and record.document_type.in_reservation_appendix:
+            appendix_two.append(row)
+        else:
+            main.append(row)
+            if record.speciality and record.speciality.in_reservation_list:
+                appendix_one.append(row)
     return [
-        ("Форма", CARD_HEADERS, _rows(main)),
-        (
-            "Приложение 1",
-            CARD_HEADERS,
-            _rows(main.filter(military__speciality__in_reservation_list=True)),
-        ),
-        ("Приложение 2", CARD_HEADERS, _rows(people.filter(separate))),
+        ("Форма", CARD_HEADERS, main),
+        ("Приложение 1", CARD_HEADERS, appendix_one),
+        ("Приложение 2", CARD_HEADERS, appendix_two),
     ]
 
 
 def hired(params):
-    """Работающие с бронью (X4) или в команде (R7), принятые за период."""
-    people = working_people().filter(account(RESERVED) | account(TEAM))
+    """Работающие с бронью или в команде, принятые за период."""
+    people = working_people().filter(account("reserved") | account("team"))
     people = _period(people, "employment_date", params)
     return [("Принятые", CARD_HEADERS, _rows(people))]
 
@@ -153,7 +157,9 @@ def reserved_dismissed(params):
     """Уволенные забронированные (раздел «Увольнения забронированных»)."""
     items = _period(ReservationDismissal.objects.all(), "dismissal_date", params)
     items = items.select_related("person").order_by("-dismissal_date")
-    people = with_card_data(Person.objects.filter(pk__in=items.values("person_id")))
+    people = with_card_data(
+        Person.objects.filter(pk__in=items.values("person_id")), full=False
+    )
     people = {p.pk: p for p in people}
     rows = []
     for item in items:
@@ -234,20 +240,20 @@ def conscripts(params):
 
 
 def vus_by_account(params):
-    """Работающие военнообязанные: по каждой ВУС — X4, R7, H9 и всего."""
+    """Работающие военнообязанные: по каждой ВУС — бронь, команда, общий учёт и всего."""
     rows = (
         working_people()
         .filter(IS_LIABLE, military__speciality__isnull=False)
         .values("military__speciality__name")
         .annotate(
-            reserved=Count("pk", filter=account(RESERVED)),
-            team=Count("pk", filter=account(TEAM)),
-            general=Count("pk", filter=account(GENERAL)),
+            reserved=Count("pk", filter=account("reserved")),
+            team=Count("pk", filter=account("team")),
+            general=Count("pk", filter=account("general")),
             total=Count("pk"),
         )
         .order_by("military__speciality__name")
     )
-    headers = ["ВУС", "Бронь (X4)", "Команда (R7)", "Общий учёт (H9)", "Всего"]
+    headers = ["ВУС", "Бронь", "Команда", "Общий учёт", "Всего"]
     data = [
         [
             r["military__speciality__name"],

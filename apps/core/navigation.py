@@ -16,6 +16,7 @@ MENU = [
         "title": "",
         "items": [
             {"label": "Главная", "url_name": "core:home"},
+            {"label": "Инструкция", "url_name": "core:help"},
         ],
     },
     {
@@ -40,8 +41,10 @@ MENU = [
                 "perm": "military.change_militaryrecord",
             },
             {
-                "label": "Обмен данными", "url_name": "legacy:exchange",
-                "namespace": "legacy", "perm": "legacy.view_importbatch",
+                "label": "Обмен данными",
+                "url_name": "legacy:exchange",
+                "namespace": "legacy",
+                "perm": "legacy.view_importbatch",
             },
         ],
     },

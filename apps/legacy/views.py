@@ -1,16 +1,14 @@
-import hashlib
-
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseBadRequest
+from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
+from .categories import category_choices
 from .dbf import conversion_zip, convert_dbf, spr_dbf
-from .exchange import import_extended, parse_extended
 from .forms import DbfForm, ProfessionCodeForm, UploadForm
-from .hr_importer import import_hr
-from .hr_source import parse_hr
+from .hr_archive import import_archive
 from .models import ImportBatch, ProfessionCode
 from .permissions import EXPORT_PERMISSIONS, IMPORT_PERMISSIONS
 
@@ -81,17 +79,9 @@ class ExchangeView(View):
             )
             return self.render(request, upload_form=form)
         try:
-            file = form.cleaned_data["file"]
-            checksum = hashlib.file_digest(file, "sha256").hexdigest()
-            file.seek(0)
-            if form.cleaned_data["kind"] == "hr":
-                result = import_hr(
-                    parse_hr(file), request.user, checksum, dry_run=dry_run
-                )
-            else:
-                result = import_extended(
-                    parse_extended(file), request.user, checksum, dry_run=dry_run
-                )
+            result = import_archive(
+                form.cleaned_data["file"], request.user, dry_run=dry_run
+            )
         except ValidationError as error:
             form.add_error(None, error)
             return self.render(request, upload_form=form)
@@ -130,6 +120,9 @@ class CodesView(View):
             codes = codes.filter(code__icontains=query)
         if request.GET.get("unmapped"):
             codes = codes.filter(row_number__isnull=True)
+        category = request.GET.get("category", "")
+        if category.isascii() and category.isdigit() and len(category) <= 2:
+            codes = codes.filter(row_number=int(category))
         page = Paginator(codes, 50).get_page(request.GET.get("page"))
         params = request.GET.copy()
         params.pop("page", None)
@@ -137,9 +130,10 @@ class CodesView(View):
             request,
             "legacy/codes.html",
             {
-                "page_title": "Коды первого отдела",
+                "page_title": "Категории работников",
                 "query": query,
-                "rows": [(code, ProfessionCodeForm(instance=code)) for code in page],
+                "categories": category_choices()[1:],
+                "rows": [(code, category_choices(code.row_number)) for code in page],
                 "page_obj": page,
                 "is_paginated": page.has_other_pages(),
                 "filter_params": params.urlencode(),
@@ -154,7 +148,9 @@ class CodesView(View):
         form = ProfessionCodeForm(request.POST, instance=code)
         if form.is_valid():
             form.save()
-            return redirect("legacy:codes")
+            path = reverse("legacy:codes")
+            query = request.GET.urlencode()
+            return redirect(f"{path}?{query}" if query else path)
         return render(
             request,
             "legacy/code_form.html",

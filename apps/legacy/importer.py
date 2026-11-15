@@ -354,8 +354,9 @@ class LegacyImporter:
                     unreservation_order=text(row.get("unbooked_ordernum"), 50),
                 )
             )
-            if text(row.get("nationality")):
-                person.nationality = text(row["nationality"], 100)
+            nationality_name = text(row.get("nationality"), 100)
+            if nationality_name and person.nationality != nationality_name:
+                person.nationality = nationality_name
                 nationality.append(person)
         self.bulk("Воинский учёт", records)
         pers.Person.objects.bulk_update(nationality, ["nationality"], batch_size=1000)

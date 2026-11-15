@@ -10,15 +10,36 @@
 </head>
 <body class="print-page">
     <div class="print-toolbar">
+        {% if person %}
+        <a class="btn" href="{% url 'personnel:detail' person.pk %}">К карточке</a>
+        {% else %}
         <a class="btn" href="{% url 'reports:certificates' %}">К справкам</a>
-        {% if certificates %}<button type="button" class="btn btn-primary" data-print>Печать / сохранить PDF</button>{% endif %}
+        {% endif %}
+        {% if sheets %}<button type="button" class="btn btn-primary" data-print>Печать / сохранить PDF</button>{% endif %}
+        {% if single_certificate %}<button type="button" class="btn" data-print="right">Печать справа</button>{% endif %}
     </div>
-    {% for person, body in certificates %}
-    <article class="certificate-sheet">
-        <div class="certificate-organization">{{ template.organization }}</div>
-        <h1>{{ template.name }}</h1>
-        <div class="certificate-body">{{ body }}</div>
-    </article>
+    {% for sheet in sheets %}
+    <section class="print-sheet">
+        {% for lines in sheet %}
+        <article class="certificate-sheet">
+            {% if show_organization_heading and template.organization %}
+            <div class="certificate-organization">{{ template.organization }}</div>
+            {% endif %}
+            <h1>{{ template.name }}</h1>
+            <div class="certificate-body">
+                {% for left, tab, right in lines %}
+                {% if tab %}
+                <div class="certificate-signature"><span>{{ left }}</span><span>{{ right }}</span></div>
+                {% elif left %}
+                <p>{{ left }}</p>
+                {% else %}
+                <div class="certificate-space" aria-hidden="true"></div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </article>
+        {% endfor %}
+    </section>
     {% empty %}<div class="panel">В выбранном цехе нет работающих забронированных сотрудников.</div>{% endfor %}
 </body>
 </html>

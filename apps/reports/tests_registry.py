@@ -1,7 +1,7 @@
 from datetime import date
 from io import BytesIO
 
-from django.test import TestCase
+from django.test import override_settings, TestCase
 from django.urls import reverse
 from openpyxl import load_workbook
 
@@ -20,6 +20,13 @@ from .registry import REPORTS
 from .services import counts, lists
 
 
+@override_settings(
+    MILITARY_ACCOUNT_CODES={
+        "reserved": "DEMO-BOOK",
+        "team": "DEMO-TEAM",
+        "general": "DEMO-GENERAL",
+    }
+)
 class ReportDataTests(TestCase):
     """Отбор людей в отчёты — по правилам старой программы, без её ошибок."""
 
@@ -30,8 +37,12 @@ class ReportDataTests(TestCase):
             name="Лейтенант", is_officer=True
         )
         self.private = ref.MilitaryRank.objects.create(name="Рядовой")
-        self.x4 = ref.SpecialAccountType.objects.create(name="Спец. учёт", code="X4")
-        self.r7 = ref.SpecialAccountType.objects.create(name="Команда", code="R7")
+        self.reserved_kind = ref.SpecialAccountType.objects.create(
+            name="Спец. учёт", code="DEMO-BOOK"
+        )
+        self.team_kind = ref.SpecialAccountType.objects.create(
+            name="Команда", code="DEMO-TEAM"
+        )
         self.listed = ref.MilitarySpeciality.objects.create(
             name="450100 — Оператор", in_reservation_list=True
         )
@@ -58,10 +69,10 @@ class ReportDataTests(TestCase):
         return sorted(row[0] for row in sheet[2])
 
     def test_headcount(self):
-        self.person(rank=self.officer, special_account_type=self.x4)
+        self.person(rank=self.officer, special_account_type=self.reserved_kind)
         self.person(
             rank=self.private,
-            special_account_type=self.r7,
+            special_account_type=self.team_kind,
             position="Водитель автомобиля",
         )
         self.person(rank=self.officer, dismissal_date=date(2025, 1, 1))  # уволен
@@ -86,7 +97,8 @@ class ReportDataTests(TestCase):
         Assignment.objects.create(
             person=part_timer, order_kind="по совм. внеш.", order_date=date(2021, 1, 1)
         )
-        form, appendix1, appendix2 = lists.reservation_form({})
+        with self.assertNumQueries(3):
+            form, appendix1, appendix2 = lists.reservation_form({})
         tabs = lambda sheet: sorted(row[0] for row in sheet[2])  # noqa: E731
         self.assertEqual(tabs(form), sorted([main.tab_number, listed.tab_number]))
         self.assertEqual(tabs(appendix1), [listed.tab_number])
@@ -114,8 +126,12 @@ class ReportDataTests(TestCase):
         )
 
     def test_hired_period(self):
-        self.person(special_account_type=self.x4, employment_date=date(2026, 3, 1))
-        self.person(special_account_type=self.r7, employment_date=date(2024, 3, 1))
+        self.person(
+            special_account_type=self.reserved_kind, employment_date=date(2026, 3, 1)
+        )
+        self.person(
+            special_account_type=self.team_kind, employment_date=date(2024, 3, 1)
+        )
         self.person(employment_date=date(2026, 3, 1))  # без брони и команды
         sheet = lists.hired({"date_from": date(2026, 1, 1), "date_to": None})[0]
         self.assertEqual(len(sheet[2]), 1)
@@ -148,15 +164,22 @@ class ReportDataTests(TestCase):
         self.assertEqual(row["Учебное заведение"], "Энский колледж")
 
     def test_vus_by_account(self):
-        self.person(speciality=self.listed, special_account_type=self.x4)
-        self.person(speciality=self.listed, special_account_type=self.r7)
-        self.person(speciality=self.listed, special_account_type=self.x4,
+        self.person(speciality=self.listed, special_account_type=self.reserved_kind)
+        self.person(speciality=self.listed, special_account_type=self.team_kind)
+        self.person(speciality=self.listed, special_account_type=self.reserved_kind,
                     dismissal_date=date(2025, 1, 1))  # fmt: skip
         rows = lists.vus_by_account({})[0][2]
         self.assertEqual(rows[0], ["450100 — Оператор", 1, 1, 0, 2])
         self.assertEqual(rows[-1][0], "Итого")
 
 
+@override_settings(
+    MILITARY_ACCOUNT_CODES={
+        "reserved": "DEMO-BOOK",
+        "team": "DEMO-TEAM",
+        "general": "DEMO-GENERAL",
+    }
+)
 class ReportPagesTests(TestCase):
     def test_list_and_downloads(self):
         self.client.force_login(make_user("viewer", VIEWER))
@@ -189,3 +212,20 @@ class ReportPagesTests(TestCase):
         self.assertContains(self.client.get("/"), "Военнообязанных")
         self.client.force_login(make_user("nobody"))
         self.assertNotContains(self.client.get("/"), "Военнообязанных")
+
+
+@override_settings(MILITARY_ACCOUNT_CODES={})
+class UnconfiguredAccountReportsTests(TestCase):
+    def test_unconfigured_report_preserves_other_counts(self):
+        make_person()
+        rows = dict(
+            row for row in counts.report_sheets({})[0][2] if not row[0].startswith(" ")
+        )
+        self.assertEqual(rows["Работающих"], 1)
+        self.assertIsNone(rows["Забронировано"])
+        self.assertIsNone(rows["Команда"])
+        self.client.force_login(make_user("unconfigured-viewer", VIEWER))
+        self.assertRedirects(
+            self.client.get(reverse("reports:download", args=["hired"])),
+            reverse("reports:list"),
+        )

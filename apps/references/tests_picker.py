@@ -96,4 +96,4 @@ class ReferencePickerTests(TestCase):
         data["department"] = "not-a-pk"
         invalid = PersonForm(data, instance=person)
         self.assertFalse(invalid.is_valid())
-        self.assertIn("Выбрать", str(invalid["department"]))
+        self.assertIn("reference-picker-open", str(invalid["department"]))

@@ -3,12 +3,15 @@ import struct
 from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
+from zipfile import ZipFile
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import CommandError, call_command
-from django.test import SimpleTestCase, TestCase
+from django.test import override_settings, SimpleTestCase, TestCase
 from django.urls import reverse
+from openpyxl import load_workbook
 
 from apps.accounts.roles import ADMIN, OPERATOR, VIEWER
 from apps.accounts.testing import make_user
@@ -20,8 +23,9 @@ from apps.references.models import MilitaryDuty, SpecialAccountType
 from .dbf import DbfTable, convert_dbf, csv_bytes, spr_dbf
 from .dump import read_dump, unescape
 from .exchange import import_extended, parse_extended
+from .hr_archive import import_archive
 from .hr_importer import import_hr
-from .hr_source import parse_hr
+from .hr_source import BK_COUNT_LABEL, parse_hr
 from .importer import LegacyImporter
 from .models import ImportBatch, PersonnelCode, ProfessionCode, SourceRow
 from .tests import card as legacy_card
@@ -42,7 +46,7 @@ def hr_file(**changes):
         13: "1",
         14: "Военнообязанный",
         63: "503",
-        64: "H9",
+        64: "DEMO-GENERAL",
         17: "201",
         47: "123-456-789 00",
         222: "301",
@@ -55,6 +59,23 @@ def hr_file(**changes):
     return SimpleUploadedFile(
         "vus.csv", ("header\n" + "\t".join(values) + "\n").encode("cp1251")
     )
+
+
+def hr_zip(*entries):
+    buffer = io.BytesIO()
+    with ZipFile(buffer, "w") as archive:
+        for name, content in entries:
+            archive.writestr(name, content)
+    return SimpleUploadedFile("cadres.zip", buffer.getvalue())
+
+
+def main_csv(bk=None):
+    data = hr_file(**{"285": "77"}).read().rstrip(b"\n")
+    return data + (f"\t{bk}\t\t".encode() if bk is not None else b"") + b"\n"
+
+
+def extended_csv():
+    return "Табельный\tОКПДТР\tКатегория\n000001\t123456\tРабочий\n".encode("cp1251")
 
 
 def dbf_file(fields, rows):
@@ -107,6 +128,13 @@ DROP TABLE public.account_cards;
         self.assertEqual(unescape(r"one\\two\nthree"), "one\\two\nthree")
 
 
+@override_settings(
+    MILITARY_ACCOUNT_CODES={
+        "reserved": "DEMO-BOOK",
+        "team": "DEMO-TEAM",
+        "general": "DEMO-GENERAL",
+    }
+)
 class HRTests(TestCase):
     def setUp(self):
         self.actor = make_user("operator", OPERATOR)
@@ -130,7 +158,7 @@ class HRTests(TestCase):
         record.reservation_document = "12/26"
         record.document_number = "manual-number"
         record.special_account_type = SpecialAccountType.objects.create(
-            code="X4", name="Бронь"
+            code="DEMO-BOOK", name="Бронь"
         )
         record.save()
         import_hr(parse_hr(hr_file(**{"227": "Новое название"})), self.actor, "second")
@@ -143,7 +171,7 @@ class HRTests(TestCase):
         self.assertTrue(record.is_reserved)
         self.assertEqual(record.reservation_document, "12/26")
         self.assertEqual(record.document_number, "manual-number")
-        self.assertEqual(record.special_account_type.code, "X4")
+        self.assertEqual(record.special_account_type.code, "DEMO-BOOK")
         self.assertEqual(person.updated_by_id, self.actor.pk)
 
     def test_bad_file_does_not_change_database(self):
@@ -172,7 +200,7 @@ class HRTests(TestCase):
         self.client.force_login(self.actor)
         self.assertEqual(self.client.get(url).status_code, 200)
         response = self.client.post(
-            url, {"kind": "hr", "file": hr_file(), "action": "import"}
+            url, {"file": hr_zip(("vus.csv", main_csv())), "action": "import"}
         )
         self.assertContains(response, "Отметьте применение изменений")
         self.assertFalse(Person.objects.exists())
@@ -182,16 +210,99 @@ class HRTests(TestCase):
         self.client.force_login(self.actor)
         url = reverse("legacy:exchange")
         response = self.client.post(
-            url, {"kind": "hr", "file": hr_file(), "action": "preview"}
+            url, {"file": hr_zip(("vus.csv", main_csv())), "action": "preview"}
         )
         self.assertContains(response, "изменения не сохранены")
         self.assertFalse(Person.objects.exists())
         response = self.client.post(
-            url, {"kind": "hr", "file": hr_file(), "action": "import", "confirm": "on"}
+            url,
+            {
+                "file": hr_zip(("vus.csv", main_csv())),
+                "action": "import",
+                "confirm": "on",
+            },
         )
         self.assertContains(response, "Данные загружены")
         self.assertEqual(Person.objects.count(), 1)
         self.assertEqual(len(ImportBatch.objects.get().checksum), 64)
+
+    def test_archive_and_report_use_last_applied_bk(self):
+        self.client.force_login(self.actor)
+        url = reverse("legacy:exchange")
+        for action, value in (("import", "125"), ("preview", "999"), ("import", None)):
+            response = self.client.post(
+                url,
+                {
+                    "action": action,
+                    "confirm": "on",
+                    "file": hr_zip(
+                        ("Данные/VUS.CSV", main_csv(value)),
+                        ("Данные/vus_ext.csv", extended_csv()),
+                    ),
+                },
+            )
+            self.assertContains(
+                response,
+                "изменения не сохранены" if action == "preview" else "Данные загружены",
+            )
+        self.assertEqual(ImportBatch.objects.count(), 2)
+        self.assertEqual(
+            ImportBatch.objects.filter(counts__has_key=BK_COUNT_LABEL)
+            .get()
+            .counts[BK_COUNT_LABEL],
+            125,
+        )
+        self.assertEqual(PersonnelCode.objects.get().profession.code, "123456")
+        response = self.client.get(reverse("reports:download", args=["headcount"]))
+        rows = dict(load_workbook(io.BytesIO(response.content)).active.values)
+        self.assertEqual(rows[BK_COUNT_LABEL], 125)
+        import_archive(hr_zip(("vus.csv", main_csv("0"))), self.actor)
+        response = self.client.get(reverse("reports:download", args=["headcount"]))
+        rows = dict(load_workbook(io.BytesIO(response.content)).active.values)
+        self.assertEqual(rows[BK_COUNT_LABEL], 0)
+        self.assertEqual(PersonnelCode.objects.count(), 1)
+
+    def test_invalid_archive_rejects_whole_import(self):
+        self.client.force_login(self.actor)
+        url = reverse("legacy:exchange")
+        cases = [
+            (hr_zip(("vus_ext.csv", extended_csv())), "нет обязательного"),
+            (
+                hr_zip(("vus.csv", main_csv()), ("x/VUS.csv", main_csv())),
+                "несколько файлов",
+            ),
+            (hr_zip(("vus.csv", main_csv("invalid"))), "целое число БК"),
+            (
+                hr_zip(("vus.csv", main_csv("42")), ("vus_ext.csv", b"bad")),
+                "vus_ext.csv:",
+            ),
+            (SimpleUploadedFile("broken.zip", b"broken"), "Не удалось прочитать ZIP"),
+        ]
+        for file, message in cases:
+            with self.subTest(message=message):
+                response = self.client.post(
+                    url, {"action": "import", "confirm": "on", "file": file}
+                )
+                self.assertContains(response, message)
+                self.assertFalse(Person.objects.exists())
+                self.assertFalse(ImportBatch.objects.exists())
+
+    def test_error_during_second_import_rolls_back_first(self):
+        file = hr_zip(("vus.csv", main_csv("42")), ("vus_ext.csv", extended_csv()))
+        with patch(
+            "apps.legacy.hr_archive.import_extended",
+            side_effect=ValidationError("ошибка"),
+        ):
+            with self.assertRaises(ValidationError):
+                import_archive(file, self.actor)
+        self.assertFalse(Person.objects.exists())
+        self.assertFalse(ImportBatch.objects.exists())
+
+    def test_bk_may_be_in_a_separate_trailing_row(self):
+        content = main_csv() + b"\t" * 286 + b"1234\t\n"
+        parsed = parse_hr(io.BytesIO(content))
+        self.assertEqual(parsed["__bk_count__"], 1234)
+        self.assertEqual(len(parsed["account_cards"]), 1)
 
     def test_command_dry_run_and_invalid_second_file_are_atomic(self):
         with TemporaryDirectory() as directory:
@@ -234,11 +345,14 @@ class HRTests(TestCase):
         self.assertEqual(code.category, "Рабочий")
 
 
+@override_settings(
+    MILITARY_ACCOUNT_CODES={"reserved": "DB", "team": "DT", "general": "DG"}
+)
 class DbfTests(TestCase):
     def setUp(self):
         self.person = make_person("000001")
         duty = MilitaryDuty.objects.create(name="Военнообязанный")
-        account = SpecialAccountType.objects.create(code="X4", name="Бронь")
+        account = SpecialAccountType.objects.create(code="DB", name="Бронь")
         MilitaryRecord.objects.create(
             person=self.person, duty=duty, special_account_type=account
         )
@@ -258,14 +372,14 @@ class DbfTests(TestCase):
             PRIZNAK="2.000000",
             CATEG_ID="1.000000",
             MIL="V",
-            UCHET="H9",
+            UCHET="DG",
         )
         raw = dbf_file(fields, [base, {**base, "MIL": "N"}, {**base, "OKPD": "bad"}])
         result = convert_dbf(raw, "proff")
         self.assertEqual((result.accepted, len(result.rejected)), (1, 2))
         output = DbfTable(result.content)
         record = next(output.records())[1]
-        self.assertEqual(output.value(record, "UCHET"), "X4")
+        self.assertEqual(output.value(record, "UCHET"), "DB")
         self.assertEqual(output.value(record, "TAB_N"), "000001")
         self.assertEqual(output.value(record, "PRIZNAK"), "2")
 
@@ -300,3 +414,21 @@ class DbfTests(TestCase):
     def test_csv_error_report_does_not_create_spreadsheet_formulas(self):
         result = csv_bytes(["Табельный номер"], [["=1+1"]]).decode("utf-8-sig")
         self.assertIn("'=1+1", result)
+
+
+class WorkerCategoryTests(TestCase):
+    def test_edit_category_keeps_search_and_validates_choices(self):
+        self.client.force_login(make_user("category-admin", ADMIN))
+        code = ProfessionCode.objects.create(code="20629", row_number=1)
+        url = reverse("legacy:codes") + "?q=20629"
+        page = self.client.get(url)
+        self.assertContains(page, "Руководители")
+        self.assertRedirects(
+            self.client.post(url, {"code": code.pk, "row_number": "12"}), url
+        )
+        code.refresh_from_db()
+        self.assertEqual(code.row_number, 12)
+        response = self.client.post(url, {"code": code.pk, "row_number": "11"})
+        self.assertEqual(response.status_code, 200)
+        code.refresh_from_db()
+        self.assertEqual(code.row_number, 12)

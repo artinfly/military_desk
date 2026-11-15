@@ -14,10 +14,8 @@ from openpyxl import load_workbook
 from apps.personnel.models import Person
 from apps.references.models import SpecialAccountType
 
+from .account_codes import account_code, booking_codes
 from .models import MilitaryRecord, ReservationDismissal
-
-# Код группы «Общий учёт» — её ставят при разбронировании
-GENERAL_ACCOUNT_CODE = "H9"
 
 
 def snils_digits(value):
@@ -36,7 +34,7 @@ def _lock_records(queryset):
     # Один порядок блокировок во всех массовых операциях: карточки, затем воинские записи.
     ids = list(queryset.values_list("person_id", flat=True))
     list(Person.objects.filter(pk__in=ids).order_by("pk").select_for_update())
-    return list(queryset.order_by("pk").select_for_update())
+    return list(queryset.filter(person_id__in=ids).order_by("pk").select_for_update())
 
 
 @transaction.atomic
@@ -66,13 +64,15 @@ class DismissedUpdate:
 @transaction.atomic
 def update_reserved_dismissed(*, actor=None):
     """Синхронизирует увольнения забронированных, блокируя карточки перед изменениями."""
-    dates = dict(Person.objects.values_list("pk", "dismissal_date"))
-    dismissed_ids = [pk for pk, date_ in dates.items() if date_ is not None]
-    history = list(ReservationDismissal.objects.values_list("pk", "person_id"))
-    removed_people = {person for pk, person in history if dates.get(person) is None}
+    history = list(
+        ReservationDismissal.objects.filter(
+            person__dismissal_date__isnull=True
+        ).values_list("pk", "person_id")
+    )
+    removed_people = {person_id for _, person_id in history}
     reserved_people = set(
         MilitaryRecord.objects.filter(
-            is_reserved=True, person_id__in=dismissed_ids
+            is_reserved=True, person__dismissal_date__isnull=False
         ).values_list("person_id", flat=True)
     )
     candidates = list(
@@ -95,7 +95,11 @@ def update_reserved_dismissed(*, actor=None):
         .order_by("pk")
         .select_for_update()
     )
-    existing = set(ReservationDismissal.objects.values_list("person_id", "order"))
+    existing = set(
+        ReservationDismissal.objects.filter(
+            person_id__in=[record.person_id for record in reserved]
+        ).values_list("person_id", "order")
+    )
     new = [
         ReservationDismissal(
             person_id=record.person_id,
@@ -114,22 +118,31 @@ def update_reserved_dismissed(*, actor=None):
 
 
 def read_snils_file(file):
-    """СНИЛС из файла Excel: первая колонка, со второй строки (первая — заголовок)."""
+    """СНИЛС из второй колонки. Поддерживается прежний файл с заголовком СНИЛС в A1."""
     if getattr(file, "size", 0) > 10 * 1024 * 1024:
         raise ValidationError("Файл слишком большой: допустимо до 10 МБ.")
     book = load_workbook(file, read_only=True, data_only=False)
     try:
         sheet = book.worksheets[0]
+        rows = sheet.iter_rows(max_col=2, values_only=True)
+        header = next(rows, (None, None))
+        legacy = (
+            str(header[0] or "").strip().casefold() == "снилс"
+            and not str(header[1] or "").strip()
+        )
+        column = 0 if legacy else 1
         result = []
-        for number, row in enumerate(
-            sheet.iter_rows(min_row=2, max_col=1, values_only=True), 2
-        ):
+        for number, row in enumerate(rows, 2):
             if number > 50001:
                 raise ValidationError(
                     "В файле больше 50 000 строк. Разделите список на части."
                 )
-            value = row[0]
+            value = row[column]
             if value is None or not str(value).strip():
+                if not legacy and str(row[0] or "").strip():
+                    raise ValidationError(
+                        f"Строка {number}: нет СНИЛС во второй колонке."
+                    )
                 continue
             if isinstance(value, (int, float)) and not isinstance(value, bool):
                 if value < 0 or value != int(value):
@@ -143,7 +156,9 @@ def read_snils_file(file):
                 )
             result.append(snils)
         if not result:
-            raise ValidationError("В первой колонке со второй строки не найдены СНИЛС.")
+            raise ValidationError(
+                "Со второй строки не найдены СНИЛС. Проверьте колонки файла."
+            )
         return list(dict.fromkeys(result))
     finally:
         book.close()
@@ -162,12 +177,13 @@ def unreserve_by_snils(snils_list, order, *, actor=None):
     Бронь снимается, группа учёта — «Общий учёт», в карточку пишется номер
     приказа о разбронировании, удостоверение об отсрочке очищается.
     """
+    code = account_code("general")
     general = (
-        SpecialAccountType.objects.active().filter(code=GENERAL_ACCOUNT_CODE).first()
+        SpecialAccountType.objects.active().filter(code=code).first() if code else None
     )
     if general is None:
         raise ValidationError(
-            "В справочнике нет действующего вида учёта H9 (Общий учёт). Операция отменена; обратитесь к администратору."
+            "В справочнике нет настроенного действующего вида «Общий учёт». Операция отменена; обратитесь к администратору."
         )
     if not snils_list or not order.strip() or len(order) > 50:
         raise ValidationError("Укажите список СНИЛС и номер приказа (до 50 символов).")
@@ -210,17 +226,21 @@ class ReserveResult:
 
 
 @transaction.atomic
-def reserve_by_snils(snils_list, order, account_type, *, actor=None):
+def reserve_by_snils(
+    snils_list, order, account_type, *, accounting_group=None, actor=None
+):
     """Бронирование работающих. При неоднозначном СНИЛС вся операция отменяется."""
     if not snils_list or not order.strip() or len(order) > 50:
         raise ValidationError("Укажите список СНИЛС и приказ (до 50 символов).")
-    if not account_type.is_active or account_type.code not in ("X4", "R7"):
-        raise ValidationError("Для бронирования нужен действующий вид учёта X4 или R7.")
+    if not account_type.is_active or account_type.code not in booking_codes():
+        raise ValidationError(
+            "Для бронирования нужен настроенный действующий вид учёта."
+        )
     people = Person.objects.filter(dismissal_date__isnull=True).exclude(snils="")
     by_snils = {}
-    for pk, snils in people.values_list("pk", "snils"):
+    for pk, snils in people.values_list("pk", "snils").iterator(chunk_size=2000):
         by_snils.setdefault(snils_digits(snils), []).append(pk)
-    result, found = ReserveResult(), []
+    result, found = ReserveResult(), {}
     for snils in dict.fromkeys(snils_list):
         if len(snils) != 11 or not snils.isascii() or not snils.isdigit():
             raise ValidationError("СНИЛС должен содержать 11 цифр.")
@@ -230,7 +250,7 @@ def reserve_by_snils(snils_list, order, account_type, *, actor=None):
                 "СНИЛС указан у нескольких работающих сотрудников. Исправьте дубли; операция отменена."
             )
         if ids:
-            found.extend(ids)
+            found[ids[0]] = snils
         else:
             result.not_found.append(snils)
     # Запись воинского учёта должна существовать: неполные карточки не бронируются автоматически.
@@ -246,10 +266,18 @@ def reserve_by_snils(snils_list, order, account_type, *, actor=None):
         raise ValidationError(
             "У части сотрудников нет воинского учёта. Заполните карточки; операция отменена."
         )
-    if any(p.dismissal_date for p in locked_people):
+    if len(locked_people) != len(found) or any(
+        person.dismissal_date or snils_digits(person.snils) != found[person.pk]
+        for person in locked_people
+    ):
         raise ValidationError(
             "Кадровые данные изменились во время операции. Повторите загрузку."
         )
+    if accounting_group is not None and not accounting_group.is_active:
+        raise ValidationError("Выберите действующую группу учёта.")
+    group_change = (
+        {} if accounting_group is None else {"accounting_group": accounting_group}
+    )
     _mark_people(found, actor)
     result.reserved = MilitaryRecord.objects.filter(
         pk__in=[r.pk for r in records]
@@ -259,5 +287,6 @@ def reserve_by_snils(snils_list, order, account_type, *, actor=None):
         reservation_document=order.strip(),
         unreservation_order="",
         updated_at=timezone.now(),
+        **group_change,
     )
     return result

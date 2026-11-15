@@ -3,6 +3,7 @@
 from django.core.management.base import BaseCommand
 from django.db.models import F, Q
 
+from apps.military.account_codes import account_code
 from apps.military.models import CommissariatRegistration
 from apps.military.services import snils_digits
 from apps.personnel.models import AdditionalAttribute, Address, Assignment, Person
@@ -46,8 +47,12 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"{model._meta.verbose_name_plural}: обратных периодов — {count}"
             )
-        h9 = SpecialAccountType.objects.filter(code="H9", is_active=True).exists()
-        self.stdout.write(f"Действующий H9: {'есть' if h9 else 'ОТСУТСТВУЕТ'}")
+        general = account_code("general")
+        available = (
+            bool(general)
+            and SpecialAccountType.objects.active().filter(code=general).exists()
+        )
+        self.stdout.write(f"Общий учёт: {'настроен' if available else 'не настроен'}")
         document = RegistrationDocument.objects.filter(code="3767")
         self.stdout.write(
             f"Документ 3767: найдено {document.count()}, в приложении 2 — {document.filter(in_reservation_appendix=True).count()}"

@@ -1,19 +1,14 @@
 from django import forms
 
+from .categories import category_choices
 from .hr_source import MAX_FILE_SIZE
 from .models import ProfessionCode
 
 
 class UploadForm(forms.Form):
-    kind = forms.ChoiceField(
-        label="Формат данных",
-        choices=(
-            ("hr", "Кадровая выгрузка vus.csv"),
-            ("extended", "Дополнительные коды vus_ext.csv"),
-        ),
-    )
     file = forms.FileField(
-        label="Файл TSV", widget=forms.ClearableFileInput(attrs={"accept": ".csv,.tsv"})
+        label="Кадровый архив ZIP",
+        widget=forms.ClearableFileInput(attrs={"accept": ".zip"}),
     )
     confirm = forms.BooleanField(label="Применить изменения в базе", required=False)
 
@@ -21,10 +16,8 @@ class UploadForm(forms.Form):
         file = self.cleaned_data["file"]
         if file.size > MAX_FILE_SIZE:
             raise forms.ValidationError("Размер файла превышает 200 МБ.")
-        if not file.name.lower().endswith((".csv", ".tsv")):
-            raise forms.ValidationError(
-                "Нужен файл .csv или .tsv с разделителем табуляции."
-            )
+        if not file.name.lower().endswith(".zip"):
+            raise forms.ValidationError("Нужен архив в формате .zip.")
         return file
 
 
@@ -48,6 +41,14 @@ class DbfForm(forms.Form):
 
 
 class ProfessionCodeForm(forms.ModelForm):
+    row_number = forms.TypedChoiceField(
+        label="Категория работника", coerce=int, empty_value=None, required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["row_number"].choices = category_choices(self.instance.row_number)
+
     class Meta:
         model = ProfessionCode
         fields = ("row_number",)

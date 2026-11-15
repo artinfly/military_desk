@@ -19,9 +19,16 @@
         </div>
     </div>
     <div class="card-actions">
-        {% if military.is_reserved and person.is_working %}<a class="btn" href="{% url 'reports:certificate' person.pk %}">Справка о бронировании</a>{% endif %}
         {% if can_change_person %}<a class="btn" href="{% url 'personnel:edit' person.pk %}">Изменить</a>{% endif %}
         {% if can_delete_person %}<a class="btn btn-danger" href="{% url 'personnel:delete' person.pk %}">Удалить</a>{% endif %}
+        {% if perms.military.view_militaryrecord %}
+            {% if person.is_working and military.is_reserved %}
+                <a class="btn" href="{% url 'reports:certificate' person.pk %}">Справка о бронировании</a>
+            {% else %}
+                <button class="btn" type="button" disabled aria-describedby="certificate-unavailable">Справка о бронировании</button>
+                <span class="muted card-changed" id="certificate-unavailable">Доступна работающим забронированным сотрудникам</span>
+            {% endif %}
+        {% endif %}
         <div class="muted card-changed">Изменено {{ person.updated_at|date:"d.m.Y H:i" }}{% if person.updated_by %}, {{ person.updated_by.short_name }}{% endif %}</div>
     </div>
 </section>

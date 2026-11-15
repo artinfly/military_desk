@@ -6,16 +6,14 @@
     <div class="filters-row">
         <div class="filters-search">{{ form.q }}</div>
         <label class="filter">{{ form.status.label }} {{ form.status }}</label>
-        <button class="btn btn-primary" type="submit">Найти</button>
-        {% if has_filters %}<a class="btn" href="{% url 'personnel:list' %}">Сбросить</a>{% endif %}
         {% if can_add %}<a class="btn btn-primary toolbar-end" href="{% url 'personnel:add' %}">Добавить карточку</a>{% endif %}
     </div>
     <div class="filters-grid">
         {% for field in form.selects %}
-        <label class="filter">
-            <span class="filter-label">{{ field.label }}</span>
+        <div class="filter">
+            <label for="{{ field.id_for_label }}" class="filter-label">{{ field.label }}</label>
             {{ field }}
-        </label>
+        </div>
         {% endfor %}
     </div>
     <div class="filters-flags">
@@ -23,6 +21,8 @@
         <label class="checkbox">{{ field }} {{ field.label }}</label>
         {% endfor %}
     </div>
+    <div class="filter-apply"><button class="btn btn-primary" type="submit">Применить фильтры</button>
+        {% if has_filters %}<a class="btn" href="{% url 'personnel:list' %}">Сбросить</a>{% endif %}</div>
     {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
 </form>
 

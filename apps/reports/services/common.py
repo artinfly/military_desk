@@ -9,16 +9,6 @@ from datetime import date
 
 from django.db.models import F, OuterRef, Prefetch, Q, Subquery
 
-
-def assignment_order():
-    """Датированные приказы раньше недатированных, при равенстве — последний ID."""
-    return (
-        F("order_date").desc(nulls_last=True),
-        F("date_from").desc(nulls_last=True),
-        "-pk",
-    )
-
-
 from apps.military.account_codes import account_code
 from apps.military.models import CommissariatRegistration
 from apps.personnel.models import (
@@ -28,6 +18,16 @@ from apps.personnel.models import (
     IdentityDocument,
     Person,
 )
+
+
+def assignment_order():
+    """Датированные приказы раньше недатированных, при равенстве — последний ID."""
+    return (
+        F("order_date").desc(nulls_last=True),
+        F("date_from").desc(nulls_last=True),
+        "-pk",
+    )
+
 
 # Военная обязанность (справочник «Военная обязанность»)
 LIABLE = "Военнообязанный"

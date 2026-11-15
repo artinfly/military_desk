@@ -29,4 +29,11 @@ media/
 .idea/
 Thumbs.db
 docs/
-.gitattributes
+.DS_Store
+
+# Локальные кеши инструментов проверки
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/

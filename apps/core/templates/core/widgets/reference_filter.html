@@ -1,4 +1,0 @@
-<div class="reference-picker multi-filter" data-picker-url="{{ widget.picker_url }}" data-picker-title="{{ widget.picker_title }}" data-field-name="{{ widget.name }}">
-    <button type="button" class="multi-trigger reference-picker-open" id="{{ widget.attrs.id }}_display" aria-haspopup="dialog" aria-controls="reference-picker-dialog">Выбрать из списка <span aria-hidden="true">⌄</span></button>
-    <div class="multi-values">{% for group, options, index in widget.optgroups %}{% for opt in options %}{% if opt.selected and opt.value %}<span class="multi-chip"><input type="hidden" name="{{ widget.name }}" value="{{ opt.value }}"><span>{{ opt.label }}</span><button type="button" class="multi-remove" aria-label="Убрать {{ opt.label }}">×</button></span>{% endif %}{% endfor %}{% endfor %}</div>
-</div>
